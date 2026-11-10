@@ -1,0 +1,17 @@
+{
+	"name": "PraiaVelas",
+	"short_name": "PraiaVelas",
+	"description": "O robô que diz, em português simples, quais FIIs e ações têm mais chance de render mais que os outros. Estudo educativo, não é recomendação de investimento.",
+	"lang": "pt-BR",
+	"start_url": "./",
+	"scope": "./",
+	"display": "standalone",
+	"orientation": "portrait",
+	"background_color": "#0b1220",
+	"theme_color": "#0b1220",
+	"icons": [
+		{ "src": "icones/icone-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+		{ "src": "icones/icone-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+		{ "src": "icones/icone-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+	]
+}

@@ -111,6 +111,7 @@ No app, só para **mostrar** o P/VP na página do fundo; o robô não usa. Na 0.
   - no site, `app/estatico.js` responde os pedidos de `/proxy?u=...` com o arquivo de `dados/` daquele endereço (`snapshotName`). O Banco Central deixa qualquer site ler, então vai direto.
 - **O motor não muda:** `estatico.js` fica fora de `app/motor`. No PC e no celular ele não faz nada.
 - **Se o Yahoo recusar mais de 3 ativos**, o trabalho falha e o GitHub mantém o site do dia anterior.
+- **Instalável no celular (10/11/2026):** `app/manifest.webmanifest` e `app/sw.js` deixam o Chrome do Android instalar o site como app; o botão "Instalar" aparece quando o navegador oferece (`beforeinstallprompt`). O service worker não guarda nada: só mostra um aviso quando não há internet. Os ícones estão em `app/icones`, cortados do desenho de 1024 px que o Codex gerou (`D:\Projetos\PraiaVelas\icone`).
 - **Limites:** só os 63 ativos do robô (uma busca de outro código explica isso); dados de uma vez por dia; sem a página de testes. O GitHub desliga trabalhos agendados de um repositório sem commit por 60 dias: um push religa.
 - **Testar antes de subir:** `node ferramentas/site.mjs D:\Projetos\PraiaVelas\site` e `node ferramentas/servidor.mjs --site D:\Projetos\PraiaVelas\site` (http://localhost:5191/PraiaVelas/?estatico).
 - **Git:** o banco fica em `D:\Projetos\PraiaVelas\git` (`git init --separate-git-dir`); na raiz do Drive há só o arquivo `.git` que aponta para lá. Os commits usam o e-mail privado do GitHub.

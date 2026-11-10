@@ -68,6 +68,8 @@ Os resultados ficam em `D:\Projetos\PraiaVelas\experimentos`. Com o app aberto n
 
 O app está no ar em **https://megashooterx.github.io/PraiaVelas/**, com os dados do último fechamento da B3: o GitHub baixa tudo de novo todo dia útil, por volta das 19h30. No site aparecem só os 63 ativos que o robô estuda. O código está em https://github.com/MegaShooterX/PraiaVelas.
 
+**Na tela do celular, como um app:** abra o site no Chrome do Android e toque em **Instalar**, no alto da tela (ou, no menu do Chrome, em "Instalar app"). O ícone, as velas do gráfico como velas de barco no mar, foi desenhado pelo Codex.
+
 ## No celular
 
 Instale o `PraiaVelas.apk` desta pasta (pelo Google Drive do celular; o Android pede para permitir instalar de fontes desconhecidas). Um APK novo, gerado com `npm run apk`, instala por cima do anterior.

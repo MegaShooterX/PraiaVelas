@@ -100,7 +100,8 @@ const types = {
 	'.css': 'text/css; charset=utf-8',
 	'.json': 'application/json',
 	'.png': 'image/png',
-	'.svg': 'image/svg+xml'
+	'.svg': 'image/svg+xml',
+	'.webmanifest': 'application/manifest+json'
 };
 
 async function proxy(target, res) {

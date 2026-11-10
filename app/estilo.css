@@ -220,8 +220,15 @@ body.vendo-robo #rodar-robo {
 	height: 16px;
 }
 
-.botao-icone[hidden] {
+.botao-icone[hidden],
+.botao-texto[hidden] {
 	display: none;
+}
+
+/* Shown only when the phone's browser offers to install the site as an app. */
+#instalar {
+	color: var(--bg);
+	background: var(--accent);
 }
 
 .botao-icone.girando svg {

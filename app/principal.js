@@ -647,6 +647,32 @@ $('perfis').addEventListener('click', (e) => {
 
 $('recarregar').addEventListener('click', () => refresh(true));
 
+// ------------------------------------------------------------------------------------------- install as an app
+
+// The site can go on the phone's home screen like an app (manifest.webmanifest, sw.js). The phone's browser says
+// when it can (beforeinstallprompt); then the "Instalar" button appears. Not in the Android app (APK), which is one.
+if ('serviceWorker' in navigator && !globalThis.Capacitor?.isNativePlatform?.()) {
+	navigator.serviceWorker.register('sw.js').catch(() => {
+		// Without it the site still works; it only cannot be installed.
+	});
+	let offer = null;
+	addEventListener('beforeinstallprompt', (event) => {
+		event.preventDefault();
+		offer = event;
+		$('instalar').hidden = false;
+	});
+	$('instalar').addEventListener('click', async () => {
+		if (!offer) return;
+		offer.prompt();
+		await offer.userChoice.catch(() => null);
+		offer = null;
+		$('instalar').hidden = true;
+	});
+	addEventListener('appinstalled', () => {
+		$('instalar').hidden = true;
+	});
+}
+
 $('resultado').addEventListener('click', (e) => {
 	const go = (sel) => e.target.closest(sel);
 	if (go('[data-voltar]')) return showList();
