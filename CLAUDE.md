@@ -1,0 +1,30 @@
+# PraiaVelas: regras para quem mexe aqui
+
+- Estudo de fundos imobiliários (FIIs). Explicação simples no `README.md`, parte técnica em `docs/TECNICO.md`.
+- Tem que rodar no celular (APK), no navegador e no PC: **JavaScript puro, sem etapa de montagem**. O que está em `app/` é o que vai para o APK. Nada de Python nem de pacote do npm dentro de `app/`.
+- `app/motor/` não toca na tela (nada de `document`): o app, o terminal e os testes usam o mesmo motor.
+- Nenhum indicador, estratégia ou padrão pode olhar para frente: cada valor usa só os candles até o seu.
+- O acerto de uma estratégia sempre aparece ao lado da base (quanto o fundo subia sozinho). Nunca mostrar acerto sozinho.
+- Nada pesado no Google Drive: cache em `D:\Projetos\PraiaVelas`, pacotes do npm e projeto Android em `D:\tools\deps\PraiaVelas`, APKs em `D:\Projetos\PraiaVelas\dist`. Não criar `node_modules`, `android/` nem `cache/` nesta pasta.
+- **A raiz é fixa:** `README.md`, `CLAUDE.md`, `package.json`, `.gitignore`, `.git`, `.github/`, `.claude/`, `PraiaVelas.apk` e as pastas `app/`, `ferramentas/`, `docs/` e `celular/` (a configuração do app Android). Arquivo novo vai para a pasta do assunto.
+- **Git e site (09/11/2026, pedido do Rhuan):** o código está em https://github.com/MegaShooterX/PraiaVelas (público) e o app no ar em https://megashooterx.github.io/PraiaVelas/.
+  - O banco do git fica fora do Drive, em `D:\Projetos\PraiaVelas\git`: na raiz há só o arquivo `.git` que aponta para lá (o Drive estraga uma pasta `.git` sincronizada).
+  - Commits com o e-mail privado do GitHub (`341226551+MegaShooterX@users.noreply.github.com`), configurado no repositório: o e-mail dele não vai para o repositório público.
+  - O site é montado pelo GitHub todo dia útil às 19h30 (`.github/workflows/site.yml` roda `ferramentas/site.mjs`): baixa os dados dos 63 ativos e publica com o app. No site, `app/estatico.js` responde os pedidos de dados com esses arquivos (lá não há o proxy do PC). Ele fica fora de `app/motor` para o motor não mudar de hash.
+  - Testar o site antes de subir: `node ferramentas/site.mjs D:\Projetos\PraiaVelas\site` e a configuração `site` do `.claude/launch.json` (porta 5191, abrir com `?estatico`).
+  - Push só quando o Rhuan pedir. Sem commit por 60 dias, o GitHub desliga o site diário; um push religa.
+- **Exceção, pedida pelo Rhuan em 09/11/2026:** o último APK fica também aqui, em `PraiaVelas.apk`, para ele instalar pelo celular. O `npm run apk` sobrescreve essa cópia a cada build; as outras versões ficam só em `D:\Projetos\PraiaVelas\dist`. A chave de assinatura fica em `%APPDATA%\PraiaVelas\android`: nunca apagar nem pôr no projeto.
+- Testar no navegador do painel: `.claude/launch.json` (configuração `app`, porta 5190), em tela de celular (375×812). No terminal: `node ferramentas/analisar.mjs HGLG11`.
+- **Não contaminar o teste** (Rhuan, 08/11/2026): "a intenção é usar o passado para prever o futuro". Durante um teste o motor fica congelado (o hash de `app/motor` vai no lacre) e nada se ajusta olhando resultado, nem parcial. Defeito achado no meio vai para a lista de correções propostas; corrigir só com o aval dele, e as correções aprovadas se juntam e são testadas juntas, num teste novo. A prova que vale é a daqui para frente: decisões de hoje lacradas, abertas quando o futuro chegar. Um período antigo guardado (2017 a 2022) só serve uma vez: depois de olhado, está contaminado.
+- **Número de versão só quando o Rhuan pedir** (09/11/2026: "para de ficar criando versão de número a cada modificação! faz tudo de uma vez e quando concluir, aí sim, talvez eu solicite o versionamento"). Até lá, tudo o que muda se junta num **rascunho**: `ENGINE_DRAFT = true` em `app/motor/analise.js`, e `ENGINE_VERSION` continua o último número. Quando ele pedir, o número sobe e `ENGINE_DRAFT` volta a `false`.
+- **Versões de 0.0.1 em 0.0.1** (0.0.2, 0.0.3 ... até 0.0.99), nunca 0.1.0 ou 0.2.0 (Rhuan, 08/11/2026). O `package.json` acompanha `ENGINE_VERSION`.
+- Teste roda de um motor congelado: `node ferramentas/experimento.mjs congelar` copia `app/motor` para `D:\Projetos\PraiaVelas\versoes\<versão>`, ou para `versoes\rascunho-<hash>` enquanto é rascunho, e o lacre confere o hash. Mudou o motor depois de congelar? Congela de novo (é outro rascunho), sem número novo.
+- **O app é para leigos** (Rhuan, 08/11/2026): a tela mostra primeiro o que o robô diz (Comprar / Esperar / Vender), o que fazer e o porquê em português simples. Número técnico (estratégias, testes, candles, médias) fica dobrado em "Detalhes técnicos". Prazo em palavras ("1 semana / 1 mês / 3 meses"). Sempre com o aviso de que o robô está em teste.
+- **Visual compacto**: margem 0, sem beirada, padding de 2 a 3 px, painéis encostados e separados por linhas de 1 px, cantos de 3 px, nada de espaço vazio. Conferir em 375 px e em 1366 px.
+- O robô roda pela tela inicial do app (o "Top 10 de agora") e no terminal: `npm run robo` (`ferramentas/robo.mjs`). Ele decide com o último ano (2 anos no prazo de 3 meses), porque o que é mais antigo vale pouco (Rhuan, 09/11/2026: "qualquer coisa de 2025 pra trás é muito antigo"). Na 0.0.3, o que era mais antigo entrava como sazonalidade; desde a 0.0.4, entra como ponto de partida. Desde a 0.0.4 a chance é de render mais que a média do grupo (FIIs contra FIIs, ações contra ações), não mais que o CDI.
+- **O app roda o que provou mais, não o mais novo.** Em 09/11/2026 a 0.0.5 (P/VP da CVM no modelo) foi testada, não foi melhor, e não entrou no app; o código dela está em `D:\Projetos\PraiaVelas\versoes\0.0.5`.
+- Antes de congelar uma versão: `node ferramentas/causalidade.mjs` (a prova de que o motor não olha o futuro).
+- Relatório de experimento sai em duas versões: `relatorio-lite.html` (uma tela) e `relatorio-avancado.html` (em abas), feitos por `ferramentas/relatorio.mjs`. Com o app aberto, ficam em http://localhost:5190/experimentos/.
+- APK só quando o Rhuan pedir: `npm run apk` (`ferramentas/apk.mjs`, mesmo caminho do PraiaPuzzle).
+- Textos da tela em português do Brasil; código em inglês, comentários explicando o porquê.
+- Sempre com o aviso: estudo educativo, não recomendação de investimento.

@@ -1,0 +1,8 @@
+node_modules/
+android/
+www/
+dist/
+cache/
+*.apk
+*.keystore
+_site/

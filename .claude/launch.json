@@ -1,0 +1,17 @@
+{
+	"version": "0.0.1",
+	"configurations": [
+		{
+			"name": "app",
+			"runtimeExecutable": "node",
+			"runtimeArgs": ["ferramentas/servidor.mjs"],
+			"port": 5190
+		},
+		{
+			"name": "site",
+			"runtimeExecutable": "node",
+			"runtimeArgs": ["ferramentas/servidor.mjs", "--site", "D:\\Projetos\\PraiaVelas\\site"],
+			"port": 5191
+		}
+	]
+}

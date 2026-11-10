@@ -1,0 +1,1350 @@
+/* A dashboard (Rhuan, 08/11/2026): no margin and no outer edge, 2-3px of padding, panels touching and split by
+   1px lines (the page background shows through 1px gaps), 3px corners only on the small controls. Only data and
+   the labels it needs. grafico.js reads --up, --down, --line, --muted, --text, --accent, --gold, --band, --cone. */
+
+:root {
+	color-scheme: dark;
+	--bg: #0b1220;
+	--card: #121b2e;
+	--card-2: #18233a;
+	--line: #22304a;
+	--text: #e6edf7;
+	--muted: #8b9bb4;
+	--up: #22c55e;
+	--down: #ef4444;
+	--accent: #38bdf8;
+	--gold: #f5b942;
+	--band: rgba(56, 189, 248, 0.07);
+	--cone: #a78bfa;
+	font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+	font-size: 13px;
+	line-height: 1.3;
+}
+
+* {
+	box-sizing: border-box;
+}
+
+html,
+body {
+	margin: 0;
+	padding: 0;
+}
+
+body {
+	display: grid;
+	gap: 1px;
+	grid-template-rows: auto auto 1fr auto;
+	min-height: 100vh;
+	background: var(--line);
+	color: var(--text);
+	-webkit-tap-highlight-color: transparent;
+}
+
+h1,
+h2,
+p,
+ul {
+	margin: 0;
+}
+
+.sobe {
+	color: var(--up);
+}
+
+.desce {
+	color: var(--down);
+}
+
+.apagado {
+	color: var(--muted);
+	font-size: 11px;
+}
+
+/* ---- top bar: brand, search, bot, tests, reload ---- */
+
+.topo {
+	position: sticky;
+	top: 0;
+	z-index: 5;
+	display: flex;
+	align-items: center;
+	gap: 3px;
+	padding: calc(3px + env(safe-area-inset-top)) 3px 3px;
+	background: var(--card);
+}
+
+.marca {
+	display: flex;
+	align-items: center;
+	gap: 3px;
+	flex: none;
+}
+
+.marca svg {
+	width: 18px;
+	height: 18px;
+}
+
+.marca strong {
+	font-size: 13px;
+}
+
+.marca small {
+	color: var(--muted);
+	font-size: 10px;
+}
+
+/* The search is a quiet field: one step lighter than the bar, an edge only on focus, the icon inside. */
+.busca {
+	position: relative;
+	display: flex;
+	flex: 1;
+	min-width: 0;
+}
+
+.busca .lupa {
+	position: absolute;
+	left: 7px;
+	top: 50%;
+	width: 14px;
+	height: 14px;
+	transform: translateY(-50%);
+	color: var(--muted);
+	pointer-events: none;
+}
+
+.busca input {
+	flex: 1;
+	min-width: 0;
+	height: 28px;
+	padding: 0 28px 0 26px;
+	border: 1px solid transparent;
+	border-radius: 3px;
+	background: var(--card-2);
+	color: var(--text);
+	font: inherit;
+	font-size: 13px;
+	letter-spacing: 0.02em;
+	text-transform: uppercase;
+	transition: border-color 0.15s, background 0.15s;
+}
+
+.busca input::placeholder {
+	text-transform: none;
+	letter-spacing: 0;
+	color: var(--muted);
+}
+
+.busca input:hover {
+	border-color: var(--line);
+}
+
+.busca input:focus {
+	outline: none;
+	border-color: rgba(56, 189, 248, 0.55);
+	background: var(--bg);
+}
+
+
+/* The arrow shows only while something is typed (Enter or the phone's search key also open it). */
+.busca button {
+	position: absolute;
+	right: 2px;
+	top: 2px;
+	width: 24px;
+	height: 24px;
+	padding: 0;
+	border: 0;
+	border-radius: 3px;
+	background: transparent;
+	color: var(--accent);
+	display: grid;
+	place-items: center;
+	cursor: pointer;
+}
+
+.busca input:placeholder-shown + button {
+	display: none;
+}
+
+.busca button svg {
+	width: 16px;
+	height: 16px;
+}
+
+.botao-icone,
+.botao-texto {
+	flex: none;
+	height: 28px;
+	padding: 0;
+	border: 0;
+	border-radius: 3px;
+	background: transparent;
+	color: var(--muted);
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 4px;
+	cursor: pointer;
+	font: inherit;
+	text-decoration: none;
+}
+
+.botao-icone {
+	width: 28px;
+}
+
+.botao-texto {
+	padding: 0 7px;
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--text);
+	background: var(--card-2);
+}
+
+.botao-icone:hover,
+.botao-texto:hover {
+	background: var(--card-2);
+	color: var(--text);
+}
+
+body.vendo-robo #rodar-robo {
+	color: var(--accent);
+	box-shadow: inset 0 -2px 0 var(--accent);
+}
+
+.botao-icone svg,
+.botao-texto svg {
+	width: 16px;
+	height: 16px;
+}
+
+.botao-icone[hidden] {
+	display: none;
+}
+
+.botao-icone.girando svg {
+	animation: girar 0.9s linear infinite;
+}
+
+@keyframes girar {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+/* ---- reading modes and the watch list ---- */
+
+.controles {
+	display: flex;
+	gap: 1px;
+}
+
+.segmentos {
+	display: flex;
+	flex: 1 1 auto;
+	gap: 1px;
+}
+
+.segmentos button,
+.chip,
+.mini button {
+	border: 0;
+	background: var(--card);
+	color: var(--muted);
+	font-weight: 600;
+	cursor: pointer;
+}
+
+.segmentos button {
+	flex: 1;
+	height: 28px;
+	padding: 0 4px;
+	font-size: 12px;
+}
+
+.segmentos button.ativo,
+.chip.ativo,
+.mini button.ativo {
+	background: var(--card-2);
+	color: var(--text);
+	box-shadow: inset 0 -2px 0 var(--accent);
+}
+
+.controles select {
+	flex: 0 1 112px;
+	min-width: 0;
+	height: 28px;
+	padding: 0 18px 0 5px;
+	border: 0;
+	border-radius: 0;
+	background: var(--card) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5l3 3 3-3' fill='none' stroke='%238b9bb4' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat right 4px center / 12px;
+	color: var(--text);
+	font: inherit;
+	font-size: 12px;
+	appearance: none;
+	cursor: pointer;
+}
+
+.controles select:focus,
+.segmentos button:focus-visible,
+.chip:focus-visible {
+	outline: 1px solid rgba(56, 189, 248, 0.55);
+	outline-offset: -1px;
+}
+
+.chips {
+	display: flex;
+	gap: 1px;
+	overflow-x: auto;
+	scrollbar-width: none;
+}
+
+.chips::-webkit-scrollbar {
+	display: none;
+}
+
+.chip {
+	flex: 1 0 auto;
+	height: 26px;
+	padding: 0 6px;
+	font-size: 12px;
+	color: var(--text);
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 4px;
+}
+
+.chip .tirar {
+	color: var(--muted);
+	font-weight: 400;
+}
+
+/* ---- the result: summary, chart, then panels in columns that fill without holes ---- */
+
+/* The result fills the screen down to the notice: what is left below is panel, not an empty grey block. */
+#resultado {
+	display: grid;
+	gap: 1px;
+	align-content: start;
+	margin: 0;
+	background: var(--card);
+}
+
+.ativo-topo {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 0 6px;
+	padding: 2px 3px;
+	background: var(--card);
+}
+
+.ativo-topo h1 {
+	font-size: 16px;
+}
+
+.ativo-topo .nome {
+	flex: 1;
+	min-width: 0;
+	color: var(--muted);
+	font-size: 11px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.ativo-topo .preco {
+	font-size: 16px;
+	font-weight: 700;
+	font-variant-numeric: tabular-nums;
+}
+
+.kpis {
+	display: grid;
+	grid-template-columns: repeat(8, minmax(0, 1fr));
+	gap: 1px;
+	margin-top: 1px;
+}
+
+.kpi {
+	background: var(--card);
+	padding: 2px 3px;
+	min-width: 0;
+}
+
+.kpi span,
+.kpi small,
+.kpi b {
+	display: block;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.kpi span {
+	font-size: 9.5px;
+	color: var(--muted);
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+}
+
+.kpi b {
+	font-size: 15px;
+	font-variant-numeric: tabular-nums;
+}
+
+.kpi small {
+	font-size: 10px;
+	color: var(--muted);
+}
+
+.t-alta {
+	color: var(--up);
+}
+
+.t-leve-alta {
+	color: #86efac;
+}
+
+.t-leve-baixa {
+	color: #fdba74;
+}
+
+.t-baixa {
+	color: var(--down);
+}
+
+#r-grafico {
+	background: var(--card);
+}
+
+.grafico-barra {
+	display: flex;
+	flex-wrap: nowrap;
+	overflow-x: auto;
+	scrollbar-width: none;
+	justify-content: space-between;
+	gap: 1px;
+	background: var(--card);
+}
+
+.mini {
+	display: flex;
+	gap: 1px;
+	background: var(--line);
+}
+
+.mini button {
+	flex: none;
+	height: 24px;
+	padding: 0 5px;
+	font-size: 11px;
+}
+
+.segmentos button small {
+	font-weight: 500;
+	color: var(--muted);
+}
+
+.area-grafico {
+	position: relative;
+}
+
+.area-grafico canvas {
+	display: block;
+	width: 100%;
+	height: 240px;
+	touch-action: pan-y;
+	cursor: crosshair;
+}
+
+.dica {
+	position: absolute;
+	z-index: 2;
+	pointer-events: none;
+	background: rgba(11, 18, 32, 0.95);
+	border: 1px solid var(--line);
+	border-radius: 3px;
+	padding: 2px 4px;
+	font-size: 11px;
+	line-height: 1.3;
+	white-space: nowrap;
+}
+
+/* The legend sits on the chart's top-left corner: no strip of its own. */
+.legenda {
+	position: absolute;
+	top: 1px;
+	left: 2px;
+	right: 60px;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0 8px;
+	padding: 0 2px;
+	font-size: 10px;
+	color: var(--muted);
+	pointer-events: none;
+	text-shadow: 0 0 3px var(--card), 0 0 3px var(--card);
+}
+
+.legenda i {
+	display: inline-block;
+	width: 12px;
+	height: 3px;
+	vertical-align: middle;
+	margin-right: 3px;
+}
+
+#r-resto {
+	column-width: 330px;
+	column-gap: 1px;
+	column-rule: 1px solid var(--line);
+	background: var(--card);
+}
+
+.cartao {
+	break-inside: avoid;
+	background: var(--card);
+	padding: 2px 3px 3px;
+	border-bottom: 1px solid var(--line);
+}
+
+.cartao h2 {
+	display: flex;
+	justify-content: space-between;
+	gap: 6px;
+	margin-bottom: 1px;
+	font-size: 10px;
+	letter-spacing: 0.05em;
+	text-transform: uppercase;
+	color: var(--muted);
+	font-weight: 700;
+}
+
+.cartao h2 span {
+	text-transform: none;
+	letter-spacing: 0;
+	font-weight: 500;
+	text-align: right;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+/* ---- tables, lists, signals ---- */
+
+.tabela {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 12px;
+	font-variant-numeric: tabular-nums;
+}
+
+.tabela th,
+.tabela td {
+	padding: 1px 2px;
+	border-top: 1px solid var(--line);
+	text-align: right;
+	vertical-align: top;
+}
+
+.tabela tr:first-child > * {
+	border-top: 0;
+}
+
+.tabela th {
+	color: var(--muted);
+	font-weight: 600;
+	font-size: 9.5px;
+	text-transform: uppercase;
+	letter-spacing: 0.03em;
+}
+
+.tabela th:first-child,
+.tabela td:first-child,
+.tabela td.esq {
+	text-align: left;
+}
+
+.tabela td small {
+	display: block;
+	color: var(--muted);
+	font-size: 10.5px;
+	line-height: 1.2;
+	text-align: left;
+}
+
+.sinal {
+	display: inline-block;
+	min-width: 38px;
+	padding: 0 2px;
+	border-radius: 3px;
+	font-size: 10px;
+	font-weight: 800;
+	text-align: center;
+}
+
+.sinal.s1 {
+	background: rgba(34, 197, 94, 0.16);
+	color: var(--up);
+}
+
+.sinal.s-1 {
+	background: rgba(239, 68, 68, 0.16);
+	color: var(--down);
+}
+
+.sinal.s0 {
+	background: var(--card-2);
+	color: var(--muted);
+}
+
+.peso {
+	display: inline-block;
+	height: 5px;
+	background: var(--accent);
+	vertical-align: middle;
+	margin-left: 2px;
+}
+
+.lista-texto {
+	padding-left: 13px;
+	font-size: 12px;
+}
+
+.lista-texto li + li {
+	margin-top: 1px;
+}
+
+.robo {
+	display: flex;
+	align-items: baseline;
+	flex-wrap: wrap;
+	gap: 6px;
+	font-size: 12px;
+	color: var(--muted);
+}
+
+.acao {
+	font-size: 12px;
+	font-weight: 800;
+	padding: 0 4px;
+	border-radius: 3px;
+}
+
+.acao.compra {
+	background: rgba(34, 197, 94, 0.16);
+	color: var(--up);
+}
+
+.acao.venda {
+	background: rgba(239, 68, 68, 0.16);
+	color: var(--down);
+}
+
+.acao.fora {
+	background: var(--card-2);
+	color: var(--text);
+}
+
+.motivos {
+	font-size: 12px;
+	margin-top: 1px;
+}
+
+.motivos summary {
+	cursor: pointer;
+	color: var(--accent);
+}
+
+.barras {
+	display: flex;
+	align-items: flex-end;
+	gap: 1px;
+	height: 36px;
+	margin-top: 2px;
+}
+
+.barras div {
+	flex: 1;
+	min-height: 2px;
+	background: var(--gold);
+	opacity: 0.85;
+}
+
+.alerta {
+	background: #2a2414;
+	color: #fde3a7;
+	padding: 2px 3px;
+	font-size: 12px;
+}
+
+.erro {
+	background: #2a1416;
+	color: #fecaca;
+}
+
+.carregando {
+	background: var(--card);
+	color: var(--muted);
+	padding: 8px 3px;
+}
+
+.rodape,
+.aviso {
+	background: var(--card);
+	color: var(--muted);
+	font-size: 10px;
+	padding: 2px 3px;
+}
+
+.aviso {
+	padding-bottom: calc(3px + env(safe-area-inset-bottom));
+}
+
+@media (max-width: 720px) {
+	.kpis {
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+	}
+	.marca strong,
+	.marca small {
+		display: none;
+	}
+}
+
+@media (min-width: 900px) {
+	.area-grafico canvas {
+		height: 340px;
+	}
+}
+
+/* While another asset loads, the old one stays on screen, dimmed. Empty rows take no line. */
+#resultado.esperando > :not(#r-status) {
+	opacity: 0.5;
+	transition: opacity 0.2s;
+}
+
+#r-status:empty,
+#r-alertas:empty,
+.chips:empty {
+	display: none;
+}
+
+.busca input.invalido {
+	border-color: var(--down);
+}
+
+/* ---- what the bot says, in plain words ---- */
+
+.instrucao {
+	display: grid;
+	grid-template-columns: minmax(118px, auto) 1fr;
+	gap: 1px;
+	margin-top: 1px;
+	background: var(--line);
+}
+
+.instrucao > div {
+	background: var(--card);
+	padding: 3px 4px;
+	min-width: 0;
+}
+
+.i-acao {
+	border-left: 3px solid var(--muted);
+}
+
+.i-acao small {
+	display: block;
+	font-size: 9.5px;
+	color: var(--muted);
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+}
+
+.i-acao b {
+	display: block;
+	font-size: 17px;
+	line-height: 1.2;
+}
+
+.i-compra .i-acao {
+	border-left-color: var(--up);
+	background: rgba(34, 197, 94, 0.1);
+}
+
+.i-compra .i-acao b {
+	color: var(--up);
+}
+
+.i-venda .i-acao {
+	border-left-color: var(--down);
+	background: rgba(239, 68, 68, 0.1);
+}
+
+.i-venda .i-acao b {
+	color: var(--down);
+}
+
+.i-texto {
+	font-size: 12px;
+	line-height: 1.3;
+}
+
+.i-texto p + p {
+	margin-top: 1px;
+}
+
+.i-texto .apagado {
+	font-size: 10.5px;
+}
+
+/* ---- the bot over many assets ---- */
+
+.escopo {
+	display: flex;
+	gap: 1px;
+}
+
+.escopo button {
+	flex: 1;
+	height: 26px;
+	border: 0;
+	background: var(--card);
+	color: var(--muted);
+	font: inherit;
+	font-size: 12px;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+.escopo button.ativo {
+	background: var(--card-2);
+	color: var(--text);
+	box-shadow: inset 0 -2px 0 var(--accent);
+}
+
+.tabela-robo {
+	border-bottom: 0;
+	overflow-x: auto;
+}
+
+.tabela-robo td {
+	white-space: nowrap;
+	vertical-align: middle;
+}
+
+.tabela-robo td.esq {
+	white-space: normal;
+}
+
+.tabela-robo td small {
+	text-align: inherit;
+}
+
+.tabela-robo td:first-child small {
+	white-space: nowrap;
+}
+
+.tabela-robo .acao {
+	display: inline-block;
+	padding: 0 4px;
+}
+
+.linha-robo {
+	cursor: pointer;
+}
+
+.linha-robo:hover,
+.linha-robo:focus-visible {
+	background: var(--card-2);
+	outline: none;
+}
+
+@media (max-width: 720px) {
+	.instrucao {
+		grid-template-columns: 1fr;
+	}
+	.i-acao {
+		display: flex;
+		align-items: baseline;
+		flex-wrap: wrap;
+		gap: 0 8px;
+	}
+}
+
+/* ======================================================================================================
+   For people who do not read charts (Rhuan, 08/11/2026): the bot's advice first, in plain words; the numbers
+   for those who understand them are folded under "Detalhes técnicos".
+   ====================================================================================================== */
+
+:root {
+	--compra: #22c55e;
+	--venda: #ef4444;
+	--espera: #f5b942;
+	font-size: 14px;
+}
+
+button.marca {
+	border: 0;
+	background: transparent;
+	color: var(--text);
+	padding: 0 2px;
+	cursor: pointer;
+	font: inherit;
+}
+
+.controles .rotulo {
+	display: flex;
+	align-items: center;
+	padding: 0 6px;
+	background: var(--card);
+	color: var(--muted);
+	font-size: 11px;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+}
+
+.segmentos button {
+	font-size: 13px;
+}
+
+.escopo button {
+	font-size: 12.5px;
+}
+
+/* ---- start: what the bot says today ---- */
+
+.resumo-robo {
+	background: var(--card);
+	padding: 6px 6px 5px;
+	border-bottom: 1px solid var(--line);
+}
+
+.manchete {
+	font-size: 16px;
+	font-weight: 700;
+	line-height: 1.3;
+}
+
+.mercado-linha {
+	font-size: 13px;
+	color: var(--muted);
+	margin-top: 2px;
+}
+
+.mercado-linha b {
+	font-weight: 600;
+}
+
+.lista-robo {
+	display: grid;
+	gap: 1px;
+	background: var(--line);
+}
+
+.item {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto minmax(118px, auto);
+	align-items: center;
+	gap: 8px;
+	width: 100%;
+	padding: 6px;
+	border: 0;
+	background: var(--card);
+	color: var(--text);
+	font: inherit;
+	text-align: left;
+	cursor: pointer;
+}
+
+.item:hover,
+.item:focus-visible {
+	background: var(--card-2);
+	outline: none;
+}
+
+.item small {
+	display: block;
+	font-size: 11.5px;
+	color: var(--muted);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.item-ativo {
+	min-width: 0;
+}
+
+.item-ativo b {
+	font-size: 15px;
+}
+
+.item-preco {
+	text-align: right;
+	font-variant-numeric: tabular-nums;
+	font-size: 13px;
+}
+
+.item-veredito {
+	text-align: right;
+	min-width: 0;
+}
+
+.item-veredito small {
+	white-space: normal;
+	line-height: 1.2;
+	margin-top: 2px;
+}
+
+.selo-v {
+	display: inline-block;
+	min-width: 84px;
+	padding: 3px 8px;
+	border-radius: 3px;
+	font-size: 14px;
+	font-weight: 800;
+	text-align: center;
+	color: #0b1220;
+}
+
+.v-compra .selo-v,
+.selo-v.v-compra {
+	background: var(--compra);
+}
+
+.v-venda .selo-v,
+.selo-v.v-venda {
+	background: var(--venda);
+	color: #fff;
+}
+
+.selo-v.v-espera {
+	background: var(--espera);
+}
+
+.honesto {
+	background: var(--card);
+	color: var(--muted);
+	font-size: 12px;
+	line-height: 1.35;
+	padding: 5px 6px;
+}
+
+/* ---- one asset ---- */
+
+.ativo-topo {
+	display: grid;
+	grid-template-columns: auto minmax(0, 1fr) auto auto;
+	align-items: center;
+	gap: 6px;
+	padding: 4px 4px 4px 2px;
+	background: var(--card);
+}
+
+.ativo-topo .voltar {
+	width: 32px;
+	height: 32px;
+	border: 0;
+	border-radius: 3px;
+	background: var(--card-2);
+	color: var(--text);
+	font-size: 18px;
+	cursor: pointer;
+}
+
+.ativo-nome {
+	min-width: 0;
+}
+
+.ativo-nome h1 {
+	font-size: 18px;
+	line-height: 1.1;
+}
+
+.ativo-nome small,
+.ativo-preco small {
+	display: block;
+	font-size: 11.5px;
+	color: var(--muted);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.ativo-preco {
+	text-align: right;
+	font-variant-numeric: tabular-nums;
+}
+
+.ativo-preco b {
+	font-size: 16px;
+}
+
+.guardar {
+	height: 32px;
+	padding: 0 8px;
+	border: 1px solid var(--line);
+	border-radius: 3px;
+	background: transparent;
+	color: var(--text);
+	font: inherit;
+	font-size: 12px;
+	cursor: pointer;
+	white-space: nowrap;
+}
+
+.guardar.guardado {
+	color: var(--espera);
+	border-color: rgba(245, 185, 66, 0.4);
+}
+
+.veredito-grande {
+	background: var(--card);
+	padding: 8px 6px 7px;
+	border-left: 4px solid var(--espera);
+}
+
+.veredito-grande.v-compra {
+	border-left-color: var(--compra);
+	background: linear-gradient(90deg, rgba(34, 197, 94, 0.1), var(--card) 60%);
+}
+
+.veredito-grande.v-venda {
+	border-left-color: var(--venda);
+	background: linear-gradient(90deg, rgba(239, 68, 68, 0.1), var(--card) 60%);
+}
+
+.veredito-grande.v-espera {
+	background: linear-gradient(90deg, rgba(245, 185, 66, 0.08), var(--card) 60%);
+}
+
+.vg-topo {
+	display: flex;
+	align-items: baseline;
+	flex-wrap: wrap;
+	gap: 0 10px;
+}
+
+.vg-topo small {
+	font-size: 12px;
+	color: var(--muted);
+}
+
+.vg-topo b {
+	order: 2;
+	flex-basis: 100%;
+	font-size: 28px;
+	line-height: 1.15;
+}
+
+.vg-topo small:last-child {
+	order: 3;
+}
+
+.v-compra .vg-topo b {
+	color: var(--compra);
+}
+
+.v-venda .vg-topo b {
+	color: var(--venda);
+}
+
+.v-espera .vg-topo b {
+	color: var(--espera);
+}
+
+.vg-conselho {
+	font-size: 15px;
+	font-weight: 600;
+	margin-top: 4px;
+}
+
+.vg-porque {
+	margin: 4px 0 0;
+	padding-left: 17px;
+	font-size: 13.5px;
+	line-height: 1.4;
+	color: #c8d3e3;
+}
+
+.vg-porque li + li {
+	margin-top: 3px;
+}
+
+.esperar {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 1px;
+	background: var(--line);
+}
+
+.esperar > div {
+	background: var(--card);
+	padding: 5px 6px;
+	min-width: 0;
+}
+
+.esperar small {
+	display: block;
+	font-size: 11.5px;
+	color: var(--muted);
+	line-height: 1.25;
+}
+
+.esperar b {
+	display: block;
+	font-size: 15px;
+	line-height: 1.3;
+	font-variant-numeric: tabular-nums;
+}
+
+/* FIIs (0.0.5): four boxes, the fourth the P/VP. */
+.esperar.quatro {
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+details.tecnico {
+	background: var(--card);
+}
+
+details.tecnico > summary {
+	padding: 7px 6px;
+	cursor: pointer;
+	color: var(--accent);
+	font-size: 13px;
+	font-weight: 600;
+	list-style-position: inside;
+}
+
+details.tecnico > summary small {
+	color: var(--muted);
+	font-weight: 400;
+	margin-left: 4px;
+}
+
+details.tecnico[open] > summary {
+	border-bottom: 1px solid var(--line);
+}
+
+details.tecnico .kpis {
+	margin-top: 0;
+}
+
+.mini .rotulo {
+	display: flex;
+	align-items: center;
+	padding: 0 6px;
+	background: var(--card);
+	color: var(--muted);
+	font-size: 11px;
+}
+
+@media (max-width: 720px) {
+	.item {
+		grid-template-columns: minmax(0, 1fr) minmax(108px, auto);
+	}
+	.item-preco {
+		display: none;
+	}
+	.esperar {
+		grid-template-columns: 1fr 1fr;
+	}
+	.esperar > div:first-child {
+		grid-column: span 2;
+	}
+	.esperar.quatro {
+		grid-template-columns: 1fr 1fr;
+	}
+	.esperar.quatro > div:first-child {
+		grid-column: auto;
+	}
+	.ativo-preco b {
+		font-size: 15px;
+	}
+}
+
+/* Wide screens: the list becomes cards in columns, so no row is mostly empty space. */
+@media (min-width: 721px) {
+	.lista-robo {
+		grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+	}
+}
+
+/* ---- Top 10 (since 0.0.3): position, chance of beating the CDI with a small bar, the bot's call ---- */
+.item {
+	grid-template-columns: 22px minmax(0, 1fr) 58px 190px;
+	gap: 6px;
+}
+
+.pos {
+	font-size: 15px;
+	font-weight: 800;
+	color: var(--muted);
+	text-align: center;
+	font-variant-numeric: tabular-nums;
+}
+
+.item-chance {
+	display: block;
+	text-align: right;
+	font-variant-numeric: tabular-nums;
+}
+
+.item-chance b {
+	font-size: 17px;
+}
+
+.item-chance i {
+	display: block;
+	height: 3px;
+	margin-top: 2px;
+	background: var(--accent);
+	opacity: 0.8;
+}
+
+details.outros {
+	background: var(--card);
+}
+
+details.outros > summary {
+	padding: 6px;
+	cursor: pointer;
+	color: var(--accent);
+	font-size: 13px;
+	font-weight: 600;
+	border-top: 1px solid var(--line);
+}
+
+details.outros .item .pos {
+	font-weight: 600;
+}
+
+@media (max-width: 720px) {
+	.item {
+		grid-template-columns: 20px minmax(0, 1fr) 46px 132px;
+	}
+	.item-chance b {
+		font-size: 15px;
+	}
+}
+
+/* The reason has its own line under the row, across the whole width. */
+.item {
+	grid-template-columns: 22px minmax(0, 1fr) 58px 96px;
+	grid-template-areas: 'pos ativo chance veredito' 'pos motivo motivo motivo';
+	row-gap: 1px;
+}
+.pos { grid-area: pos; align-self: start; padding-top: 1px; }
+.item-ativo { grid-area: ativo; }
+.item-chance { grid-area: chance; }
+.item-veredito { grid-area: veredito; }
+.item-motivo { grid-area: motivo; font-size: 11.5px; color: var(--muted); line-height: 1.25; }
+@media (max-width: 720px) {
+	.item { grid-template-columns: 20px minmax(0, 1fr) 46px 90px; }
+	.selo-v { min-width: 0; width: 100%; }
+}

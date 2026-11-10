@@ -1,0 +1,46 @@
+# The site of PraiaVelas on GitHub Pages (https://megashooterx.github.io/PraiaVelas/).
+#
+# Every weekday after the B3 closes (19:30 in Brasília, 22:30 UTC; GitHub may start it some minutes late), and on
+# each push to main, ferramentas/site.mjs downloads the quotes of the robot's 63 assets and the FIIs' CVM reports,
+# and publishes them with the app (app/). The page reads them from there (app/estatico.js): Yahoo and the CVM do not
+# let a page of another site read them directly. If too many assets fail to download, the job fails and the site of
+# the day before stays up.
+#
+# GitHub turns off scheduled jobs of a repository with no new commit for 60 days: a push turns it back on.
+
+name: Site
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '30 22 * * 1-5'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  site:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Baixar os dados do dia e montar o site
+        run: node ferramentas/site.mjs _site
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deploy
+        uses: actions/deploy-pages@v4

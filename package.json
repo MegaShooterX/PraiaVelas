@@ -1,0 +1,14 @@
+{
+	"name": "praiavelas",
+	"productName": "PraiaVelas",
+	"version": "0.0.4",
+	"description": "PraiaVelas: um robô que estuda FIIs e ações e diz, em português simples, os 10 com mais chance de render mais que o CDI",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"app": "node ferramentas/servidor.mjs",
+		"analisar": "node ferramentas/analisar.mjs",
+		"robo": "node ferramentas/robo.mjs",
+		"apk": "node ferramentas/apk.mjs"
+	}
+}

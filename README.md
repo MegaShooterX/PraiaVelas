@@ -1,0 +1,90 @@
+# PraiaVelas
+
+Um robô que estuda **fundos imobiliários (FIIs)** e ações e diz, em português simples, se compraria, esperaria ou venderia, e por quê. Feito para quem não entende de gráfico.
+
+## Como funciona
+
+- **Início: o Top 10 de agora.**
+  - Assim que o app abre, o robô estuda 41 FIIs e 22 ações.
+  - Ele mostra, em ordem, os que têm mais chance de **render mais que a média do seu grupo** no prazo escolhido, com os dividendos: FIIs contra FIIs, ações contra ações.
+  - Para cada um aparecem a chance, **Comprar**, **Esperar** ou **Vender**, e o motivo em poucas palavras.
+  - No topo, uma frase resume o dia e diz como está o mercado, inclusive quando ele começa a virar para cima.
+- **Como ele aprende:**
+  - O robô compara cada ativo com os outros do grupo, no mesmo dia: quem paga mais dividendos, quem caiu mais da máxima, quem subiu mais, quem está mais agitado, quem dá sinal de virar para cima.
+  - Com o último ano, ele aprende quais dessas diferenças costumam vir antes de render mais que os outros.
+  - Ele começa do que valeu nos anos anteriores, e o último ano corrige.
+- **Toque num ativo** para ver:
+  - a recomendação grande e o que fazer, para quem não tem e para quem já tem;
+  - até três motivos, sem jargão;
+  - o que esperar: a faixa onde o preço costuma ficar no prazo escolhido, quanto o ativo rende por mês e como foi o último ano;
+  - nos FIIs, o P/VP: quanto a cota custa perto do patrimônio que ela representa, pelo último relatório do fundo à CVM;
+  - um gráfico simples, com o preço e a faixa para onde ele pode ir.
+- **Prazo:** 1 semana, 1 mês ou 3 meses. A recomendação muda conforme o prazo.
+- **Detalhes técnicos**, dobrados no fim da página, para quem entende: o que o robô aprendeu, as situações mais parecidas do passado, o mercado, as estratégias de gráfico, padrões de candle e dividendos.
+
+## Como o robô decide
+
+Ele só manda comprar quando três coisas acontecem juntas:
+- a chance de render mais que a média do grupo é de 60% ou mais;
+- o modelo passou no próprio teste, com dados que não usou para aprender;
+- o mercado do grupo (o IFIX para FIIs, o Ibovespa para ações) não está caindo, ou já dá sinal de virar para cima. Ir melhor que os outros num mercado em queda ainda pode ser perder dinheiro.
+
+Ação ele manda vender com 30% ou menos. FII ele não manda vender: fundo imobiliário paga rendimento todo mês. Em todo o resto, ele espera.
+
+## O robô está em teste
+
+Cada versão do robô é testada **às cegas**:
+- ele decide em datas passadas vendo só os dados até ali;
+- as decisões são lacradas;
+- só depois se abre o que aconteceu.
+
+Cada correção vira uma versão nova (0.0.1, 0.0.2, ...), com teste novo. Também há decisões de hoje lacradas, para conferir quando o futuro chegar.
+
+**Até agora, nenhuma versão provou que escolhe melhor que o resto.**
+- Na versão atual (0.0.4), o Top 10 de 1 mês rendeu um pouco mais que a média em 2019–2026, mas pouco demais para separar de sorte.
+- O que melhorou: a chance que ela mostra passou a valer o que diz. Quem teve 60% ou mais rendeu mais que o grupo em 63% das vezes.
+- A 0.0.5 olhava também o preço contra o patrimônio dos FIIs (P/VP), dos relatórios que eles mandam à CVM. Não foi melhor que a 0.0.4.
+- Depois, um pacote com as ideias que faltavam (uma segunda opinião, o modelo da 0.0.3, e o prazo de 3 meses só com a lição dos anos antigos) também não passou nas regras combinadas antes do teste.
+- Por isso o app decide como a 0.0.4 (aparece como 0.0.4+). O que entrou foi o **P/VP na página de cada FII**: quanto a cota custa perto do patrimônio que ela representa, pelo relatório do fundo à CVM. É só informação: o robô não usa.
+- **A prova que vale é a do futuro:** toda sexta-feira, as decisões do fechamento são lacradas, do app e do pacote, e conferidas quando o prazo vence. A soma dessas semanas dirá qual escolhe melhor.
+
+Os resultados ficam em `D:\Projetos\PraiaVelas\experimentos`. Com o app aberto no computador, eles aparecem em http://localhost:5190/experimentos/, cada um com um relatório lite (uma tela) e um avançado (em abas).
+
+> É um estudo estatístico e educativo, não uma recomendação de investimento. O passado não garante o futuro.
+
+## Online
+
+O app está no ar em **https://megashooterx.github.io/PraiaVelas/**, com os dados do último fechamento da B3: o GitHub baixa tudo de novo todo dia útil, por volta das 19h30. No site aparecem só os 63 ativos que o robô estuda. O código está em https://github.com/MegaShooterX/PraiaVelas.
+
+## No celular
+
+Instale o `PraiaVelas.apk` desta pasta (pelo Google Drive do celular; o Android pede para permitir instalar de fontes desconhecidas). Um APK novo, gerado com `npm run apk`, instala por cima do anterior.
+
+## Como abrir
+
+No computador, com o Node instalado, dentro desta pasta:
+
+```bash
+npm run app
+```
+
+e abra http://localhost:5190 no navegador. Os dados vêm do Yahoo Finance.
+
+O robô no terminal, para todos os ativos de uma vez:
+
+```bash
+npm run robo -- --perfil swing
+```
+
+O estudo completo de um ativo no terminal:
+
+```bash
+npm run analisar -- HGLG11 MXRF11 --perfil swing
+```
+
+## O que vem depois
+
+- Notícias.
+- No futuro, ligação com corretoras para comprar e vender.
+
+A parte técnica e a lista completa estão em [docs/TECNICO.md](docs/TECNICO.md).

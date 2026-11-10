@@ -1,0 +1,16 @@
+{
+	"appId": "br.com.praiamar.praiavelas",
+	"appName": "PraiaVelas",
+	"webDir": "www",
+	"backgroundColor": "#0b1220",
+	"android": {
+		"allowMixedContent": false,
+		"captureInput": false,
+		"webContentsDebuggingEnabled": false
+	},
+	"plugins": {
+		"CapacitorHttp": {
+			"enabled": true
+		}
+	}
+}
