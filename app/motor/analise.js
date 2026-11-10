@@ -57,6 +57,17 @@ const OLD_LESSON = new Set();
  */
 export const MODEL_LOGIC = SECOND_OPINION || OLD_LESSON.size ? 'pacote-2026-11-09' : '0.0.4';
 
+/**
+ * How wide the price range is drawn (10/11/2026, approved by Rhuan): width × agitation^power, where agitation is how
+ * much rougher the last month was than the year (the asset's or its market's, at least 1). Until then it was the
+ * agitation alone, and the "most likely" band held the final price 55% to 62% of the times (up to 80% in rough
+ * markets) instead of half: too wide. Fitted on 2019-2022 and checked on 2023-2026, which the fit never saw: 1 week
+ * and 1 month came out right (51% inside the likely band; 90% and 88% inside the wide one). For 3 months the wide
+ * band came out too narrow (86%), so 3 months keeps the old width. Plan and result in
+ * D:\Projetos\PraiaVelas\diario\faixa-2026-11-10.
+ */
+const RANGE = { curto: { width: 0.95, power: 0.65 }, swing: { width: 0.82, power: 0.65 }, posicao: { width: 1, power: 1 } };
+
 /** Ways of reading the chart: the size of each candle and how far ahead the reading looks. */
 export const PROFILES = {
 	curto: {
@@ -307,7 +318,9 @@ export function analyze(history, { profile = 'swing', mode = 'ponderada', kind =
 	// No tilt: the cone is centred on today's price, and wider when the asset or its market has been rougher
 	// in the last month than in its usual year.
 	const ownRatio = volRatio(history.candles);
-	const scale = Math.max(1, Number.isFinite(ownRatio) ? ownRatio : 1, Number.isFinite(marketNow?.volRatio) ? marketNow.volRatio : 1);
+	const agitation = Math.max(1, Number.isFinite(ownRatio) ? ownRatio : 1, Number.isFinite(marketNow?.volRatio) ? marketNow.volRatio : 1);
+	const range = RANGE[P.id] ?? { width: 1, power: 1 };
+	const scale = range.width * agitation ** range.power;
 	const projection = monteCarlo(x.c, { horizon: P.horizon, drift: 0, lookback: P.lookback, scale });
 	const learned = withJournal(model ? forecast(model, picture ?? pictureOf(prep, history, model), today?.second ?? null) : null, journal, group.id, P.id);
 	const book = today?.book ?? null;
@@ -358,7 +371,7 @@ export function analyze(history, { profile = 'swing', mode = 'ponderada', kind =
 		context: { ...context, narrative: narrative(context) },
 		verdict: { score, ...verdictOf(score), confidence },
 		expected: { total: baseMean, base: baseMean, probUp: projection?.probUp ?? NaN },
-		projection: projection ? { ...projection, scale } : null,
+		projection: projection ? { ...projection, scale, agitation } : null,
 		validation,
 		strategies,
 		patterns: { recent: recentPatterns, study: patternStudy },

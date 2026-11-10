@@ -85,11 +85,23 @@ function plainReasons(r, d) {
 	return out;
 }
 
-/** The main reason in a few words, for the list. */
-function shortReason(r, d) {
-	const top = r.forecast?.drivers?.[0];
-	if (!top) return d.blockers[0]?.split(':')[0] ?? '';
-	return `${top.effect > 0 ? '↑' : '↓'} ${top.text}`;
+// ------------------------------------------------------------------------------------------- errors
+
+/**
+ * An error in a person's words, never the browser's English: on 10/11/2026 the screen said "Não consegui baixar
+ * KNHY11: Failed to fetch" when the computer's server had been closed. context: what was being done, for errors
+ * that are not about the connection.
+ */
+function friendly(message, context = '') {
+	const m = String(message ?? '');
+	if (/Failed to fetch|NetworkError|Load failed|sem resposta|tempo esgotado|HTTP 50\d/i.test(m)) {
+		const here = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) && !globalThis.Capacitor?.isNativePlatform?.();
+		return here
+			? 'O PraiaVelas não está respondendo neste computador: o programa que serve o app foi fechado. Abra de novo com "npm run app", ou use o site no ar (megashooterx.github.io/PraiaVelas).'
+			: 'Sem conexão agora: não deu para baixar os dados. Confira a internet e toque em ↻ para tentar de novo.';
+	}
+	const said = explainOnline(m);
+	return context ? `${context}: ${said}` : said;
 }
 
 // ------------------------------------------------------------------------------------------- the journal
@@ -124,7 +136,24 @@ function journalLine(j, profile) {
 	const sign = last.spread >= 0 ? 'a mais' : 'a menos';
 	const redone = last.refeito ? ' (refeito com os dados até aquele dia)' : '';
 	const fixed = j.apply ? ' As chances de hoje já vêm corrigidas pelo que ele acertou e errou.' : '';
-	return `<p class="mercado-linha diario-linha">Como o robô foi: no Top 10 de ${HORIZON[profile]} de ${dateBr(last.date)}${redone}, <b>${last.beat} de ${last.n}</b> renderam mais que a média do grupo até ${dateBr(last.end)}, e o Top 10 rendeu <b class="${tone(last.spread)}">${pct(Math.abs(last.spread), 1, false)} ${sign}</b> que todos.${fixed}</p>`;
+	return `<p class="mercado-linha">Como o robô foi: no Top 10 de ${HORIZON[profile]} de ${dateBr(last.date)}${redone}, <b>${last.beat} de ${last.n}</b> renderam mais que a média do grupo até ${dateBr(last.end)}, e o Top 10 rendeu <b class="${tone(last.spread)}">${pct(Math.abs(last.spread), 1, false)} ${sign}</b> que todos.${fixed}</p>`;
+}
+
+/**
+ * Is the robot right or wrong, in one line (Rhuan, 10/11/2026): the verdict of its bets in this horizon (the sealed
+ * ones once there are enough, the past lived day by day until then), and how often the 1st of each group beat the
+ * group's average, beside all of them.
+ */
+function scoreLine(j, profile) {
+	const x = j?.placar?.[profile];
+	const v = x?.sealed?.n >= 8 ? x.sealed : x?.past;
+	if (!v) return '';
+	const who = v === x.sealed ? 'nas apostas lacradas' : `refeito dia a dia desde ${String(x.past.from).slice(0, 4)}`;
+	const word = { acerta: 'acerta mais que a sorte', erra: 'erra mais que a sorte', sorte: 'igual à sorte', cedo: 'ainda cedo para dizer' }[v.word];
+	const f = x.precision?.FII;
+	const a = x.precision?.Ação;
+	const groups = f && a ? ` O 1º dos FIIs bateu a média dos FIIs em ${chance(f.first)} das vezes (todos: ${chance(f.all)}); a 1ª das ações, em ${chance(a.first)} (todas: ${chance(a.all)}).` : '';
+	return `<p class="mercado-linha diario-linha">Placar do robô em ${HORIZON[profile]} (${who}): <b class="${v.word === 'acerta' ? 'sobe' : v.word === 'erra' ? 'desce' : ''}">${word}</b>: o Top 10 ganhou da média em ${v.won} de ${v.n}.${groups}</p>`;
 }
 
 const HONEST ='O robô está em teste. Nos testes às cegas feitos até agora, nenhuma versão provou que escolhe melhor que o resto: a ordem do Top 10 ainda pode ser sorte. Use como estudo, não como ordem.';
@@ -220,16 +249,47 @@ function status(text, error = false) {
 
 const SCOPES = { todos: 'Todos', FII: 'FIIs', Ação: 'Ações', lista: 'Minha lista' };
 
+/**
+ * The robot's chance in words: how it sees the asset against the others of its group. A "52%" reads as precise to a
+ * beginner, and the journal showed it is about a coin (10/11/2026): the words say so, the number stays beside them.
+ */
+function chanceWords(p) {
+	if (p >= 0.6) return 'bem melhor que os outros';
+	if (p >= 0.55) return 'melhor que os outros';
+	if (p >= 0.52) return 'um pouco melhor que os outros';
+	if (p > 0.48) return 'igual aos outros';
+	if (p > 0.45) return 'um pouco pior que os outros';
+	return 'pior que os outros';
+}
+
+/** What a beginner looks at first: what it pays, its price against what the fund owns, and the last month. */
+function facts(r) {
+	const out = [];
+	if (r.kind === 'FII' && r.dy12 > 0) out.push(`paga ~${money((r.dy12 * r.price) / 12)} por mês por cota (${pct(r.dy12, 1, false)} ao ano)`);
+	else if (r.dy12 > 0) out.push(`dividendos de ${pct(r.dy12, 1, false)} ao ano`);
+	else out.push('sem dividendos no último ano');
+	const pvp = r.book?.pvp;
+	if (Number.isFinite(pvp)) out.push(Math.abs(pvp - 1) < 0.03 ? 'preço igual ao patrimônio' : `preço ${pct(Math.abs(pvp - 1), 0, false)} ${pvp < 1 ? 'abaixo' : 'acima'} do patrimônio`);
+	if (Number.isFinite(r.change1m)) out.push(`<span class="${tone(r.change1m)}">${pct(r.change1m)}</span> no mês`);
+	return out.join(' · ');
+}
+
+/**
+ * One asset of the list, for a beginner (Rhuan, 10/11/2026: "algo realmente útil e info relevante para o analista
+ * iniciante"): the price today, what it pays, its price against its assets, the month, and the robot's view in
+ * words. The strong colour only when the robot acts (Comprar, Vender): ten yellow "Esperar" said nothing.
+ */
 function item(x, position) {
 	const { r, d } = x;
 	const v = VERDICT[d.action];
 	const p = r.forecast.p;
+	const act = d.action === 'FICAR DE FORA' ? '<span class="item-acao">esperar</span>' : `<span class="selo-v ${v.cls}">${v.word}</span>`;
 	return `<button type="button" class="item" data-abrir="${r.ticker}">
 		<span class="pos">${position}</span>
 		<span class="item-ativo"><b>${r.ticker}</b><small>${escape(r.segment ?? shortName(r.name, r.ticker))}</small></span>
-		<span class="item-chance"><b>${chance(p)}</b><i style="width:${Math.round(Math.max(0, Math.min(1, p)) * 100)}%"></i></span>
-		<span class="item-veredito"><span class="selo-v ${v.cls}">${v.word}</span></span>
-		<span class="item-motivo">${escape(shortReason(r, d))}</span>
+		<span class="item-preco"><b>${money(r.price)}</b><small class="${tone(r.dayChange)}">${pct(r.dayChange)} hoje</small></span>
+		<span class="item-fatos">${facts(r)}</span>
+		<span class="item-robo"><span>Robô: <b>${chanceWords(p)}</b> (${chance(p)})</span>${act}</span>
 	</button>`;
 }
 
@@ -252,7 +312,7 @@ function renderList(rows, markets, loading, j = null) {
 		${Object.entries(markets)
 			.map(([kind, m]) => `<p class="mercado-linha">Mercado de ${groupWords(kind)}: <b class="${m ? tone(m.trend || m.turn) : ''}">${marketWords(m)}</b></p>`)
 			.join('')}
-		${loading ? '' : journalLine(j, P.id)}`;
+		${loading ? '' : scoreLine(j, P.id) + journalLine(j, P.id)}`;
 	const top = rows.slice(0, 10);
 	const rest = rows.slice(10);
 	$('v-lista').innerHTML = top.length
@@ -291,7 +351,7 @@ async function showList() {
 			markets[kind] = study?.studies?.[settings.profile]?.market ?? null;
 			for (const r of ranking(study, settings.profile, j)) rows.push({ r, d: decide(r) });
 		} catch (error) {
-			status(`Não deu para estudar os ${groupWords(kind)}: ${error.message}`, true);
+			status(friendly(error.message, `Não deu para estudar os ${groupWords(kind)}`), true);
 		}
 	}
 	if (id !== request) return;
@@ -352,7 +412,10 @@ function renderExpect(r) {
 	const c = r.context;
 	const monthly = c.dividends12 / 12;
 	const items = [];
-	if (f) items.push(`<div><small>Preço daqui a ${HORIZON[r.profile.id]}</small><b>${money(f.p25)} a ${money(f.p75)}</b><small>na maioria dos cenários (hoje ${money(c.last)})</small></div>`);
+	// How often the price really ended inside the range, in the blind test of 2023 to 2026: said in counts, not as
+	// "most of the scenarios". 1 week and 1 month with the calibrated width (10/11/2026); 3 months with the old one.
+	const inside = { curto: 'em cerca de metade das vezes', swing: 'em cerca de metade das vezes', posicao: 'em cerca de 5 a 6 de cada 10 vezes' }[r.profile.id];
+	if (f) items.push(`<div><small>Preço daqui a ${HORIZON[r.profile.id]}</small><b>${money(f.p25)} a ${money(f.p75)}</b><small>onde o preço terminou ${inside} no passado; quase sempre (9 em 10) entre ${money(f.p5)} e ${money(f.p95)} · hoje ${money(c.last)}</small></div>`);
 	items.push(
 		monthly > 0
 			? `<div><small>Rendimento</small><b>~${money(monthly)} por mês</b><small>por cota · ${pct(c.dy12, 1, false)} ao ano</small></div>`
@@ -584,10 +647,11 @@ async function run(force = false) {
 				settings.ticker = before.ticker;
 				persist();
 			}
-			status(explainOnline(error.message), true);
+			status(friendly(error.message), true);
 		} else {
+			// Nothing else on screen: the error and the way back, never a dead end.
 			chart = null;
-			status(explainOnline(error.message), true);
+			$('resultado').innerHTML = `<div class="alerta erro">${escape(friendly(error.message))}</div><button type="button" class="botao-texto voltar-erro" data-voltar>← Voltar ao Top 10</button>`;
 		}
 	} finally {
 		if (id === request) {

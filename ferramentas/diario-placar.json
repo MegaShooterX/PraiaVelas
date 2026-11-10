@@ -1,0 +1,242 @@
+{
+ "asOf": "2026-11-09",
+ "placar": {
+  "curto": {
+   "precision": {
+    "FII": {
+     "days": 1950,
+     "all": 0.5,
+     "first": 0.536,
+     "top3": 0.55,
+     "top10": 0.532
+    },
+    "Ação": {
+     "days": 1950,
+     "all": 0.488,
+     "first": 0.502,
+     "top3": 0.495,
+     "top10": 0.499
+    }
+   },
+   "sealed": {
+    "since": "2026-11-09",
+    "n": 0,
+    "won": 0,
+    "word": "cedo",
+    "text": "ainda cedo para dizer (0 apostas separadas; precisa de 8)",
+    "days": 0
+   },
+   "past": {
+    "from": "2019-01-02",
+    "to": "2026-11-06",
+    "n": 390,
+    "won": 209,
+    "z": 1.4178351139171335,
+    "word": "sorte",
+    "text": "igual à sorte: ganhou em 209 de 390 (a sorte daria uns 195)",
+    "days": 1950
+   },
+   "strip": [
+    true,
+    true,
+    false,
+    true,
+    true,
+    true,
+    false,
+    false,
+    false,
+    true,
+    false,
+    true,
+    true,
+    true,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    true,
+    true,
+    true,
+    false,
+    false,
+    false,
+    false,
+    true,
+    true,
+    true,
+    true,
+    true,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "stripSealed": false
+  },
+  "swing": {
+   "precision": {
+    "FII": {
+     "days": 1934,
+     "all": 0.509,
+     "first": 0.555,
+     "top3": 0.543,
+     "top10": 0.524
+    },
+    "Ação": {
+     "days": 1934,
+     "all": 0.48,
+     "first": 0.493,
+     "top3": 0.506,
+     "top10": 0.502
+    }
+   },
+   "sealed": {
+    "since": "2026-11-09",
+    "n": 0,
+    "won": 0,
+    "word": "cedo",
+    "text": "ainda cedo para dizer (0 apostas separadas; precisa de 8)",
+    "days": 0
+   },
+   "past": {
+    "from": "2019-01-02",
+    "to": "2026-11-06",
+    "n": 93,
+    "won": 49,
+    "z": 0.5184758473652127,
+    "word": "sorte",
+    "text": "igual à sorte: ganhou em 49 de 93 (a sorte daria uns 47)",
+    "days": 1934
+   },
+   "strip": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "stripSealed": false
+  },
+  "posicao": {
+   "precision": {
+    "FII": {
+     "days": 1890,
+     "all": 0.511,
+     "first": 0.469,
+     "top3": 0.492,
+     "top10": 0.488
+    },
+    "Ação": {
+     "days": 1890,
+     "all": 0.474,
+     "first": 0.492,
+     "top3": 0.532,
+     "top10": 0.503
+    }
+   },
+   "sealed": {
+    "since": "2026-11-09",
+    "n": 0,
+    "won": 0,
+    "word": "cedo",
+    "text": "ainda cedo para dizer (0 apostas separadas; precisa de 8)",
+    "days": 0
+   },
+   "past": {
+    "from": "2019-01-02",
+    "to": "2026-11-06",
+    "n": 30,
+    "won": 15,
+    "z": 0,
+    "word": "sorte",
+    "text": "igual à sorte: ganhou em 15 de 30 (a sorte daria uns 15)",
+    "days": 1890
+   },
+   "strip": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    true,
+    false,
+    false,
+    false,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+   ],
+   "stripSealed": false
+  }
+ }
+}

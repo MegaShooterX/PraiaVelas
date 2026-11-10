@@ -9,7 +9,7 @@ self.addEventListener('fetch', (event) => {
 	event.respondWith(
 		fetch(event.request).catch(
 			() =>
-				new Response('<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width"><body style="background:#0b1220;color:#e6edf7;font:15px system-ui;padding:16px">Sem internet: o PraiaVelas precisa dela para estudar o mercado. Tente de novo quando a conexão voltar.</body>', {
+				new Response('<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width"><body style="background:#0b1220;color:#e6edf7;font:15px system-ui;padding:16px">O PraiaVelas não respondeu: sem internet agora (ou, no computador, o programa do app foi fechado). <a href="" style="color:#38bdf8">Tentar de novo</a></body>', {
 					headers: { 'content-type': 'text/html; charset=utf-8' }
 				})
 		)

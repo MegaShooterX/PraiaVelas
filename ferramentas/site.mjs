@@ -85,6 +85,9 @@ const apply = verdict?.passed === true;
 const days = apply ? calendar.filter((d) => d >= '2019-01-02') : [...new Set(Object.values(diario.JOURNAL_HORIZON).map((h) => calendar[calendar.length - 1 - h]))].sort();
 const entries = await liveDays(motorDir, histories, days);
 const journalFile = journalForApp({ entries, histories, calendar, engine: { decide, GROUPS, diario }, logic: MODEL_LOGIC, apply, test: verdict ? { passed: verdict.passed, madeAt: verdict.madeAt } : null });
+// The scoreboard (is it right or wrong?) comes from the computer's journal, which lived every day since 2019.
+const placarFile = fileURLToPath(new URL('./diario-placar.json', import.meta.url));
+if (existsSync(placarFile)) journalFile.placar = JSON.parse(readFileSync(placarFile, 'utf8')).placar;
 console.log(`Diário: ${entries.length} dia(s) vividos, lição ${apply ? 'em uso' : 'fora do app'}.`);
 
 rmSync(out, { recursive: true, force: true });

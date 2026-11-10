@@ -29,7 +29,8 @@ Sobem de 0.0.1 em 0.0.1, até 0.0.99, e **só quando o Rhuan pedir** (09/11/2026
 | 0.0.5 | A 0.0.4 mais, nos FIIs, duas medidas dos relatórios mensais à CVM: P/VP e a mudança do patrimônio por cota em 12 meses (09/11/2026). Testada e não adotada: não foi melhor que a 0.0.4 e baixa 10 MB da CVM. | `versoes\0.0.5` (hash ac66ec…) |
 | rascunho | O pacote de 09/11/2026: a 0.0.4 com a segunda opinião da 0.0.3 e o prazo de 3 meses só com a lição dos anos antigos, e o P/VP na tela. Testado; as duas mudanças do robô não passaram nas suas regras. Lacrado toda sexta ao lado do app. | `versoes\rascunho-fbd2177e` |
 | rascunho | A lógica da 0.0.4 com o P/VP na tela (as duas mudanças do pacote desligadas, `SECOND_OPINION` e `OLD_LESSON` em `analise.js`). Era o app até 10/11/2026; segue lacrado toda sexta. | `versoes\rascunho-8f266276` |
-| rascunho | **O que o app usa (0.0.4+, desde 10/11/2026):** o mesmo, mais o diário do robô (`diario.js`, `journalEntry` em `analise.js`). A chance do modelo é a mesma da 0.0.4; a lição do diário a corrige só se passou no teste dela. | `versoes\rascunho-caf39bc4` |
+| rascunho | O mesmo, mais o diário do robô (`diario.js`, `journalEntry` em `analise.js`). A chance do modelo é a mesma da 0.0.4; a lição do diário a corrige só se passou no teste dela (não passou). | `versoes\rascunho-caf39bc4` |
+| rascunho | **O que o app usa (0.0.4+, desde 10/11/2026):** o mesmo, com a faixa de preço calibrada em 1 semana e 1 mês. As chances são idênticas: o diário foi herdado. | `versoes\rascunho-a1478a7b` |
 
 Mudou o motor depois de congelar? Congela de novo: é outro rascunho, sem número novo. Teste nunca roda do `app/motor`, só de uma cópia congelada.
 
@@ -80,7 +81,7 @@ No app, só para **mostrar** o P/VP na página do fundo; o robô não usa. Na 0.
   - **lite:** o que venceu hoje (acertou ou errou, ativo por ativo), o placar dos dias lacrados, o passado, o que o robô diz hoje nos três prazos e o que ele aprendeu;
   - **avançado:** abas Resumo, Hoje, Placar, Passado (ano a ano, com e sem a lição), Lição (a confiança ao longo do tempo), Lacres e Plano.
 - **A prova de que não olha o futuro** (`causalidade.mjs`) confere também o diário: cada dia recebe os históricos inteiros, embaralhados depois do dia, e as chances saem iguais; a lição recebe dias ainda não vencidos, embaralhados, e não muda. Conferido que ela pega um diário que lê 5 dias à frente e uma lição que usa dias não vencidos.
-- **Comandos:** `node ferramentas/diario.mjs passado | revelar-passado | hoje | relatorio | conferir`. Motor novo (outro hash) começa outro diário, em outra pasta, com o passado vivido de novo.
+- **Comandos:** `node ferramentas/diario.mjs passado | revelar-passado | hoje | relatorio | conferir | herdar --de <motor>`. Motor novo (outro hash) começa outro diário, em outra pasta, com o passado vivido de novo, a não ser que as chances sejam as mesmas: `herdar` confere isso em 3 dias e leva o diário junto (foi o que aconteceu de `rascunho-caf39bc4` para `rascunho-a1478a7b`, que só mudou a faixa de preço).
 
 ## As melhorias do modelo de 10/11/2026 (testadas, nenhuma entrou)
 
@@ -100,6 +101,26 @@ No app, só para **mostrar** o P/VP na página do fundo; o robô não usa. Na 0.
 
 - **O que isso ensina:** aprender com mais calma deixa a chance mais modesta (e por isso mais honesta), mas não ordena melhor. O limite está no que as 8 medidas sabem, não em como o modelo aprende com elas. Melhorar a ordem pede informação nova, testada do mesmo jeito.
 - **O que se repetiu nas quatro versões:** os 10 melhores FIIs no prazo de 1 semana renderam mais que todos os FIIs (+0,04% a +0,09% por semana). É a mesma pista da 0.0.4, da 0.0.5 e do pacote; o diário vai conferi-la daqui para frente.
+
+## O placar e a faixa de preço (10/11/2026)
+
+- **O placar** ("o robô está acertando?"): no topo do relatório do diário e numa linha da tela inicial do app. Para cada prazo:
+  - o veredito em palavras ("acerta mais que a sorte", "igual à sorte", "erra mais que a sorte", "ainda cedo"), contando só apostas separadas por um prazo, com a regra de 2 desvios (`verdictOf` em `diario-nucleo.mjs`). As apostas lacradas valem a partir de 8; até lá, mostra o passado vivido dia a dia;
+  - uma fita com as últimas 40 apostas (verde: o Top 10 rendeu mais que todos);
+  - quantas vezes o 1º, os 3 primeiros e os 10 primeiros de cada grupo bateram a média do grupo, ao lado de todos (`precisionOf`).
+  - O site recebe esse placar do `ferramentas\diario-placar.json`, que o `diario.mjs` reescreve todo dia.
+- **O que o placar mostrou (2019 a 2026, todo pregão):** igual à sorte nos três prazos (1 semana: 209 de 390; 1 mês: 49 de 93; 3 meses: 15 de 30). A única vantagem é dos FIIs em 1 semana e 1 mês: o 1º bateu a média em 54% e 56% das vezes, contra 50% e 51% de todos. Nas ações e em 3 meses, nenhuma.
+- **A faixa de preço** (o cone): no teste lacrado do app, a faixa "provável" conteve o preço final em 55% a 62% das vezes (devia ser 50%), e com o mercado agitado em até 80%: larga demais. O alargamento pela agitação exagera.
+  - **Calibração testada** (plano em `D:\Projetos\PraiaVelas\diario\faixa-2026-11-10`): largura × agitação^0,65 (larguras 0,95, 0,82 e 0,83), ajustada em 2019–2022 e conferida em 2023–2026.
+  - Em 1 semana e 1 mês **passou** (faixa provável com 51%, de 90% com 90% e 88%). Em 3 meses a de 90% ficou estreita demais (86%). A regra pedia os três prazos e não passou, mas o Rhuan aprovou usar nos dois que passaram: **desde 10/11/2026, 1 semana e 1 mês usam a faixa calibrada** (`RANGE` em `analise.js`, motor `rascunho-a1478a7b`); 3 meses fica como era.
+  - A tela passou a dizer a faixa em contagem: "onde o preço terminou em cerca de 6 de cada 10 vezes no passado; quase sempre (9 em 10) entre R$ A e R$ B", em vez de "na maioria dos cenários".
+
+## A lista para o iniciante (10/11/2026)
+
+O Rhuan: "todas as informações ali são relevantes e precisam ser desse jeito? Não precisa de um rework para exibir algo realmente útil e info relevante para o analista iniciante?"
+- **Saiu do item:** o "52%" grande com barra (soava preciso, e o diário mostrou que é quase cara ou coroa), o "Esperar" amarelo repetido nos 10 e o motivo técnico ("mais calmo que o normal dele"). O motivo continua na página do ativo.
+- **Entrou:** o preço de hoje e a variação do dia; quanto paga por mês por cota e por ano (FIIs) ou os dividendos do ano (ações); o preço contra o patrimônio, em palavras ("preço 10% abaixo do patrimônio"); a variação do mês; e a opinião do robô em palavras ("igual aos outros", "um pouco melhor que os outros"), com o % pequeno ao lado.
+- O selo colorido só aparece quando o robô age (Comprar, Vender); "esperar" fica discreto.
 
 ## O site no GitHub Pages
 

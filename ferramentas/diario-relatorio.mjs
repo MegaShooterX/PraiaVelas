@@ -49,6 +49,20 @@ const EXTRA_CSS = `
 .licao .lrot{display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
 .licao p{margin:0}
 @media (max-width:900px){.licao{grid-template-columns:minmax(0,1fr)}}
+.placar{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--grid)}
+.placar > div{background:var(--surface);padding:3px 4px;min-width:0;font-size:12px;line-height:1.35}
+.placar h3{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:0 0 1px}
+.veredito{font-weight:750;font-size:13px}
+.veredito.acerta{color:var(--good-text)}.veredito.erra{color:var(--bad)}.veredito.sorte,.veredito.cedo{color:var(--ink-2)}
+.fita{display:flex;flex-wrap:wrap;gap:1px;margin:2px 0}
+.fita i{width:8px;height:12px;display:block;border-radius:1px}
+.fita i.g{background:var(--good-text)}.fita i.p{background:var(--bad)}
+.precisao{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:11.5px;margin-top:2px}
+.precisao td,.precisao th{padding:1px 3px;text-align:right;border-top:1px solid var(--grid)}
+.precisao th{font-size:9.5px;color:var(--muted);font-weight:600;border-top:0}
+.precisao td:first-child,.precisao th:first-child{text-align:left}
+.precisao td.mais{color:var(--good-text);font-weight:700}
+@media (max-width:900px){.placar{grid-template-columns:minmax(0,1fr)}}
 `;
 
 /** The top 10 the app showed on a scored day: corrected by the lesson when it is in use, the model's otherwise. */
@@ -199,6 +213,27 @@ function headline(ctx) {
 	return parts.join(' ').replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
 }
 
+/**
+ * Is the robot right or wrong? (Rhuan, 10/11/2026.) For each horizon: the verdict of the sealed bets and of the past
+ * lived day by day, a strip of the last bets (green: the top 10 beat all of them; red: it did not), and how often
+ * the 1st, the top 3 and the top 10 of each group beat its average, beside all of them (the base).
+ */
+function rightOrWrong(ctx) {
+	const pl = ctx.placar;
+	if (!pl) return '';
+	const cols = PROFILES.map((p) => {
+		const x = pl[p];
+		if (!x) return '';
+		const sealed = x.sealed.days ? `<p><span class="veredito ${x.sealed.word}">Lacradas: ${esc(x.sealed.text)}</span></p>` : `<p class="muted">Lacradas: nenhuma venceu ainda (a primeira vence por volta de ${dateBr(roughlyAfter(ctx.scoreboard.since ?? ctx.scoreboard.asOf, ctx.horizons[p]))}).</p>`;
+		const past = x.past ? `<p><span class="veredito ${x.past.word}">Passado: ${esc(x.past.text)}</span> <span class="muted">(${x.past.from?.slice(0, 4)}–${x.past.to?.slice(0, 4)}, refeito dia a dia)</span></p>` : '';
+		const strip = x.strip?.length ? `<div class="fita" role="img" aria-label="Últimas ${x.strip.length} apostas: ${x.strip.filter(Boolean).length} ganharam">${x.strip.map((w) => `<i class="${w ? 'g' : 'p'}" title="${w ? 'ganhou da média' : 'perdeu da média'}"></i>`).join('')}</div><p class="muted">As últimas ${x.strip.length} apostas ${x.stripSealed ? 'lacradas' : 'do passado'}: verde, o Top 10 rendeu mais que todos.</p>` : '';
+		const row = (label, q) => (q ? `<tr><td>${label}</td>${['first', 'top3', 'top10'].map((k) => `<td class="${q[k] - q.all >= 0.03 ? 'mais' : ''}">${pc(q[k])}</td>`).join('')}<td>${pc(q.all)}</td></tr>` : '');
+		const table = `<table class="precisao"><tr><th>Bateu a média do grupo</th><th>1º</th><th>Top 3</th><th>Top 10</th><th>Todos</th></tr>${row('FIIs', x.precision?.FII)}${row('Ações', x.precision?.Ação)}</table>`;
+		return `<div><h3>${WORD[p]}</h3>${sealed}${past}${strip}${table}</div>`;
+	});
+	return card('O robô está acertando?', 'a sorte daria metade; em verde, 3 pontos ou mais acima de todos', `<div class="placar">${cols.join('')}</div>`);
+}
+
 function topBar(ctx, link) {
 	const sb = ctx.scoreboard;
 	return `<nav class="volta"><a href="/experimentos/">← Testes</a><a href="/">App</a>${link}</nav><div class="bar"><h1>Diário do robô</h1><span class="sub">fechamento de ${dateBr(sb.asOf)} · motor ${esc(ctx.engine)} · ${sb.sealed - sb.late} dia${sb.sealed - sb.late === 1 ? '' : 's'} lacrado${sb.sealed - sb.late === 1 ? '' : 's'} desde ${dateBr(sb.since)}</span><span class="selo" data-tip="Cada dia é lacrado no próprio dia (SHA-256)|e só é aberto quando o prazo vence" tabindex="0"><b>✓</b> lacres conferidos</span></div>`;
@@ -238,6 +273,7 @@ function lite(ctx) {
 	const apply = ctx.lesson?.apply === true;
 	const body = [topBar(ctx, '<a href="relatorio-avancado.html">Versão avançada →</a>')];
 	body.push(`<p class="hero">${headline(ctx)}</p>`);
+	body.push(rightOrWrong(ctx));
 	body.push(tiles(ctx));
 	body.push(lastScored(ctx));
 	body.push(`<div class="g3">${PROFILES.map((p) => card(`Hoje · ${WORD[p]}`, apply ? 'chance corrigida pela lição' : 'chance do modelo', todayTable(ctx.today, p, apply))).join('')}</div>`);
@@ -254,7 +290,7 @@ function advanced(ctx) {
 		tabs.push(`<button type="button" role="tab" data-aba="${id}" aria-selected="false">${esc(label)}</button>`);
 		panes.push(`<section class="aba" id="${id}" role="tabpanel">${html}</section>`);
 	};
-	add('resumo', 'Resumo', `<p class="hero">${headline(ctx)}</p>${tiles(ctx)}${lastScored(ctx)}${card('O teste da lição', 'regras fixadas antes, no plano', verdictTable(ctx.verdict))}`);
+	add('resumo', 'Resumo', `<p class="hero">${headline(ctx)}</p>${rightOrWrong(ctx)}${tiles(ctx)}${lastScored(ctx)}${card('O teste da lição', 'regras fixadas antes, no plano', verdictTable(ctx.verdict))}`);
 	add('hoje', 'Hoje', `<div class="g3">${PROFILES.map((p) => card(`${WORD[p]} · todos`, apply ? 'chance corrigida' : 'chance do modelo', todayTable(ctx.today, p, apply, true))).join('')}</div>`);
 	add(
 		'placar',

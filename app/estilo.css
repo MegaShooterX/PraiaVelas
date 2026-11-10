@@ -225,6 +225,11 @@ body.vendo-robo #rodar-robo {
 	display: none;
 }
 
+/* The way back when an asset could not be opened and nothing else is on screen. */
+.voltar-erro {
+	margin: 3px;
+}
+
 /* Shown only when the phone's browser offers to install the site as an app. */
 #instalar {
 	color: var(--bg);
@@ -1361,4 +1366,56 @@ details.outros .item .pos {
 @media (max-width: 720px) {
 	.item { grid-template-columns: 20px minmax(0, 1fr) 46px 90px; }
 	.selo-v { min-width: 0; width: 100%; }
+}
+
+/* ---- The list for beginners (10/11/2026): the price, what it pays, its price against its assets, the month, and
+   the robot's view in words; the strong colour only when the robot acts ---- */
+.item {
+	grid-template-columns: 22px minmax(0, 1fr) auto;
+	grid-template-areas: 'pos ativo preco' 'pos fatos fatos' 'pos robo robo';
+	row-gap: 2px;
+	align-items: start;
+}
+.item-preco {
+	grid-area: preco;
+	display: block;
+	text-align: right;
+	font-variant-numeric: tabular-nums;
+}
+.item-preco b {
+	font-size: 14px;
+}
+.item-fatos {
+	grid-area: fatos;
+	font-size: 12.5px;
+	line-height: 1.3;
+	color: var(--text);
+}
+.item-robo {
+	grid-area: robo;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 6px;
+	font-size: 12px;
+	color: var(--muted);
+}
+.item-robo b {
+	color: var(--text);
+	font-weight: 600;
+}
+.item-acao {
+	flex: none;
+	font-size: 11px;
+	color: var(--muted);
+	border: 1px solid var(--line);
+	border-radius: 3px;
+	padding: 0 6px;
+}
+.item .selo-v {
+	flex: none;
+	min-width: 0;
+	width: auto;
+	padding: 1px 8px;
+	font-size: 12px;
 }

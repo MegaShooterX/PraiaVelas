@@ -216,6 +216,54 @@ export function journalForApp({ entries, histories, calendar, engine, logic, app
 	};
 }
 
+/**
+ * Is the robot right? (Rhuan, 10/11/2026: "preciso achar mais fácil no relatório se o sistema vem acertando ou
+ * errando".) From scored records: how often the 1st, the top 3 and the top 10 of each group beat the group's
+ * average, beside all of them (the base: about half). In plain counts, so a person can read them.
+ */
+export function precisionOf(records) {
+	const out = {};
+	for (const p of PROFILE_IDS) {
+		out[p] = {};
+		for (const kind of ['FII', 'Ação']) {
+			const byDay = new Map();
+			for (const r of records[p]?.[kind] ?? []) {
+				if (!byDay.has(r.i)) byDay.set(r.i, []);
+				byDay.get(r.i).push(r);
+			}
+			const c = { days: byDay.size, all: [0, 0], first: [0, 0], top3: [0, 0], top10: [0, 0] };
+			for (const rows of byDay.values()) {
+				rows.sort((a, b) => b.p - a.p);
+				for (const [k, r] of rows.entries()) {
+					c.all[0] += r.y;
+					c.all[1]++;
+					if (k === 0) (c.first[0] += r.y), c.first[1]++;
+					if (k < 3) (c.top3[0] += r.y), c.top3[1]++;
+					if (k < 10) (c.top10[0] += r.y), c.top10[1]++;
+				}
+			}
+			const rate = ([y, n]) => (n ? Math.round((y / n) * 1000) / 1000 : null);
+			out[p][kind] = { days: c.days, all: rate(c.all), first: rate(c.first), top3: rate(c.top3), top10: rate(c.top10) };
+		}
+	}
+	return out;
+}
+
+/**
+ * The verdict of a series of bets, in words: each bet won when the top 10 earned more than all of them. Only bets
+ * one horizon apart are counted (next ones share most of their future); fewer than 8 is too early to say.
+ */
+export function verdictOf(wins, h) {
+	const apart = wins.filter((_, k) => k % h === 0);
+	const n = apart.length;
+	const won = apart.filter(Boolean).length;
+	if (n < 8) return { n, won, word: 'cedo', text: `ainda cedo para dizer (${n} aposta${n === 1 ? '' : 's'} separada${n === 1 ? '' : 's'}; precisa de 8)` };
+	const z = (won - n / 2) / Math.sqrt(n / 4);
+	if (z >= 2) return { n, won, z, word: 'acerta', text: `acerta mais que a sorte: ganhou em ${won} de ${n}` };
+	if (z <= -2) return { n, won, z, word: 'erra', text: `erra mais que a sorte: ganhou em só ${won} de ${n}` };
+	return { n, won, z, word: 'sorte', text: `igual à sorte: ganhou em ${won} de ${n} (a sorte daria uns ${Math.round(n / 2)})` };
+}
+
 /** A lesson made small for the app (the numbers it needs, and what it learned from, in words). */
 export function lessonForApp(L) {
 	if (!L) return null;

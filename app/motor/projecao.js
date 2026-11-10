@@ -7,7 +7,8 @@
 // Since 0.0.2 the analysis gives no tilt (drift 0): in 0.0.1 the strategies tilted the cone, and its "chance of
 // going up" said 67% to 73% when the price rose 35% to 50% of the times. And when the market is rougher than its
 // usual year, the replayed moves are scaled up (`scale`): in the agitated October of 2026 only 37% of the prices
-// ended inside the 90% band of 0.0.1.
+// ended inside the 90% band of 0.0.1. Since 10/11/2026 that widening is gentler and calibrated, for 1 week and 1
+// month (RANGE in analise.js): the bands had become too wide.
 
 /** A small seeded random generator: the same data gives the same cone every time. */
 function random(seed) {

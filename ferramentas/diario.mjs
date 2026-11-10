@@ -11,6 +11,9 @@
 //        the day of the last close: lives it, corrects it with today's lesson, seals it; scores every sealed day
 //        whose horizon has passed; writes licao.json (what the app reads) and the two reports. Run every weekday
 //        after the close by the task "PraiaVelas: robô do dia".
+//   node ferramentas/diario.mjs herdar --de rascunho-xxxxxxxx
+//        a new engine whose chances are the same (only what is shown changed, like the price range) inherits the
+//        old engine's journal, after checking on three days that both give exactly the same chances
 //   node ferramentas/diario.mjs relatorio      only redraws the two reports
 //   node ferramentas/diario.mjs conferir       checks every seal
 //   [--versao rascunho-xxxxxxxx]               the frozen engine (default: the frozen copy of app/motor)
@@ -20,10 +23,10 @@
 // (refeito), and it does not count in the proof, only in the lesson.
 
 import { createHash } from 'node:crypto';
-import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { appendFileSync, cpSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { addUp, briefScore as brief, finalOf, HORIZON_WORD, lessonForApp, lessonsAt, liveDays, PROFILE_IDS, recordsOf, scoreFinal } from './diario-nucleo.mjs';
+import { addUp, briefScore as brief, finalOf, HORIZON_WORD, lessonForApp, lessonsAt, liveDays, precisionOf, PROFILE_IDS, recordsOf, scoreFinal, verdictOf } from './diario-nucleo.mjs';
 
 const base = process.env.PRAIAVELAS_SAIDA ?? 'D:\\Projetos\\PraiaVelas';
 const args = process.argv.slice(2);
@@ -353,8 +356,25 @@ async function refresh(histories) {
 		const replay = pastResults?.profiles?.[p]?.last?.at(-1);
 		return replay ? { ...brief(replay, apply), refeito: true } : null;
 	};
+	// Is it right or wrong? Each horizon: the sealed bets (the proof) and the past lived day by day (since 2019), in
+	// words, a strip of the last bets, and how often the 1st, the top 3 and the top 10 of each group beat its average.
+	const precision = precisionOf(recordsOf([...(past?.entries ?? []), ...days.map((d) => d.entry)], histories, calendar, until, engine.diario));
+	const scoreboardWords = {};
+	for (const p of PROFILE_IDS) {
+		const h = engine.diario.JOURNAL_HORIZON[p];
+		const sealedWins = score[p].list.map((x) => (apply ? x.top : x.topRaw).mean > x.all.mean);
+		const pastWins = (pastResults?.profiles?.[p]?.series ?? []).map(([, withLesson, raw]) => (apply ? withLesson : raw) > 0);
+		scoreboardWords[p] = {
+			precision: precision[p],
+			sealed: { since: scoreboard.since, ...verdictOf(sealedWins, h), days: sealedWins.length },
+			past: pastResults ? { from: pastResults.from, to: pastResults.to, ...verdictOf(pastWins, h), days: pastWins.length } : null,
+			strip: (sealedWins.length ? sealedWins : pastWins).slice(-40),
+			stripSealed: sealedWins.length > 0
+		};
+	}
 	const lesson = {
 		v: 1,
+		placar: scoreboardWords,
 		logic: todayDay?.logic ?? engine.analise.MODEL_LOGIC,
 		engine: engine.version,
 		asOf: todayDay?.date ?? null,
@@ -387,7 +407,9 @@ async function refresh(histories) {
 	console.log(`  A lição ${apply ? 'está em uso no app' : 'não está em uso no app (não passou no teste, ou o teste ainda não foi aberto)'}.`);
 	try {
 		const { writeJournalReports } = await import('./diario-relatorio.mjs');
-		const out = writeJournalReports({ folder, engine: engine.version, scoreboard, lesson, past: pastResults, verdict, today: todayDay, horizons: engine.diario.JOURNAL_HORIZON });
+		const out = writeJournalReports({ folder, engine: engine.version, scoreboard, lesson, past: pastResults, verdict, today: todayDay, horizons: engine.diario.JOURNAL_HORIZON, placar: scoreboardWords });
+		// The site has no journal of its own past: it shows this scoreboard, kept in the project (pushed with it).
+		writeFileSync(fileURLToPath(new URL('./diario-placar.json', import.meta.url)), JSON.stringify({ asOf: last, placar: scoreboardWords }, null, 1));
 		console.log(`\nRelatórios:\n  ${out.lite}\n  ${out.advanced}`);
 	} catch (error) {
 		console.log(`Sem os relatórios: ${error.message}`);
@@ -400,7 +422,35 @@ function check() {
 	console.log(`Diário do motor ${engine.version}: passado ${past ? `lacrado (${past.entries.length} pregões)` : 'não vivido'}, ${days.length} dia(s) lacrado(s), todos conferem.`);
 }
 
+/**
+ * The journal follows the chances, not every line of the engine: when a new engine gives exactly the same chances
+ * (checked on three days, one of them the last close), it keeps the old one's sealed past and days. The old seals
+ * stay as they were, with the engine that made them.
+ */
+async function inherit() {
+	const from = option('de');
+	if (!from) throw new Error('Use: node ferramentas/diario.mjs herdar --de <motor antigo>');
+	engine = await frozenEngine();
+	const source = join(base, 'diario', from);
+	const target = join(base, 'diario', engine.version);
+	if (!existsSync(join(source, 'passado', 'lacre.json'))) throw new Error(`O motor ${from} não tem diário.`);
+	if (existsSync(join(target, 'passado', 'lacre.json'))) throw new Error(`O motor ${engine.version} já tem diário.`);
+	const old = await import(pathToFileURL(join(versionsDir, from, 'motor', 'analise.js')).href);
+	if (old.MODEL_LOGIC !== engine.analise.MODEL_LOGIC) throw new Error(`As chances mudaram de lógica (${old.MODEL_LOGIC} → ${engine.analise.MODEL_LOGIC}): o diário não pode ser herdado.`);
+	const histories = await loadHistories(engine, DAY_OLD);
+	const calendar = histories.HGLG11.candles.map((c) => c.date);
+	const days = [calendar.at(-701), calendar.at(-201), calendar.at(-1)];
+	for (const date of days) {
+		if (JSON.stringify(old.journalEntry(histories, date)) !== JSON.stringify(engine.analise.journalEntry(histories, date))) throw new Error(`As chances mudaram em ${date}: o diário não pode ser herdado.`);
+	}
+	cpSync(source, target, { recursive: true });
+	writeFileSync(join(target, 'herdado.json'), JSON.stringify({ from, engine: engine.version, at: new Date().toISOString(), sameChancesOn: days }, null, 1));
+	await open();
+	console.log(`O diário de ${from} passou para ${engine.version}: as chances são iguais em ${days.join(', ')}.`);
+}
+
 if (step === 'passado') await livePast();
+else if (step === 'herdar') await inherit();
 else if (step === 'revelar-passado') await revealPast();
 else if (step === 'hoje') await today();
 else if (step === 'relatorio') {
