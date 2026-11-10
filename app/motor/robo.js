@@ -15,6 +15,8 @@
 // 5. Otherwise it waits. It still writes down the side it would pick if it had to (chance above or below 50%:
 //    better or worse than the others), so every case can be scored.
 // The numbers 60% and 30% and the market rule were fixed before any test of this version.
+// Since the draft of 10/11/2026 the chance may come corrected by the robot's journal (diario.js): what it learned
+// from its own scored days about how far to trust its chances. The rules are the same; they read the corrected one.
 
 export const RULES = { buyAt: 0.6, sellAt: 0.3, sellsFii: false, notInFallingMarket: true };
 
@@ -24,7 +26,8 @@ export const RULE_LINES = [
 	'**COMPRAR**: chance de render mais que a média do grupo de 60% ou mais, o modelo passou no próprio teste (acertou melhor que o chute da média, em dados que não usou para aprender) e o mercado do grupo não está caindo (ou já dá sinal de virar para cima).',
 	'**VENDER**: só ações, com chance de 30% ou menos, e o modelo passou no próprio teste. Vender = sair da posição (não é venda a descoberto). FII não se vende: com chance baixa, o robô espera.',
 	'**ESPERAR**: em todo o resto. Mesmo assim ele registra o **veredito forçado** (o lado que escolheria se fosse obrigado: melhor ou pior que a média do grupo), para todas as decisões serem conferidas.',
-	'**Top 10**: os ativos com a maior chance de render mais que a média do seu grupo no prazo, do maior para o menor.'
+	'**Top 10**: os ativos com a maior chance de render mais que a média do seu grupo no prazo, do maior para o menor.',
+	'**Diário do robô**: todo pregão ele anota a chance de cada ativo e, quando o prazo vence, confere quem rendeu mais que a média do grupo. Com o que acertou e errou (desde 2019, um dia de cada vez), aprende quanto confiar nas próprias chances: se andou confiante demais, a chance mostrada fica mais modesta; se acertou mais do que dizia, fica mais forte. Nunca inverte a opinião. A correção só aparece se passou no teste dela.'
 ];
 
 const pctText = (v, d = 0) => `${(v * 100).toFixed(d).replace('.', ',')}%`;
@@ -53,6 +56,7 @@ export function decide(r) {
 	const a = f.analogs;
 	const reasons = [
 		`Chance de render mais que ${avg} em ${horizon}: ${pctText(p)} (média do último ano: ${pctText(f.base)}).`,
+		...(f.journal ? [`O diário do robô corrigiu a chance do modelo (${pctText(f.beforeJournal)}): no último ano, ele ${f.journal.trust}.`] : []),
 		`Nas ${a.n} situações mais parecidas do último ano, rendeu mais que ${avg} em ${a.beat} (${pctText(a.beat / (a.n || 1))}); em média ${a.mean >= 0 ? '+' : ''}${pctText(a.mean, 1)} de diferença.`,
 		...f.drivers.slice(0, 4).map((d) => `${d.effect > 0 ? 'A favor' : 'Contra'}: ${d.text}.`),
 		`Modelo aprendido com ${f.rows} situações de ${f.from?.split('-').reverse().join('/')} a ${f.trainedUntil?.split('-').reverse().join('/')}, partindo dos anos anteriores; teste próprio: ${Number.isFinite(f.skill) ? `${f.skill > 0 ? 'melhor' : 'não melhor'} que o chute da média` : 'sem dados'}.`

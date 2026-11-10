@@ -16,8 +16,13 @@
 //   SECOND_OPINION, the learner of 0.0.3 (aprendizado-cdi.js) tilting the chance by its view of each asset against
 //   the group; and OLD_LESSON, the 3-month reading with only the lesson of the older years.
 // With both off, the robot decides exactly as 0.0.4.
+//
+// The robot's journal (diario.js, draft of 10/11/2026): every trading day the chances are written down
+// (journalEntry), scored when the horizon passes, and the robot learns from its own record how far to trust them.
+// The app shows the corrected chance (ranking and analyze with a journal) only when the journal's lesson passed
+// its test (the journal file says so: apply); otherwise the chance is the model's, as before.
 
-import { fetchHistory } from './dados.js';
+import { fetchHistory, historyUntil } from './dados.js';
 import { load, save } from './armazem.js';
 import { resample, studyPatterns } from './candles.js';
 import { buildContext, STRATEGIES } from './estrategias.js';
@@ -28,6 +33,7 @@ import { compare, dataset, forecast, relativize, trainModel } from './aprendizad
 import * as second from './aprendizado-cdi.js';
 import { fetchRates, rateTools, ratesUntil } from './juros.js';
 import { bookNow, fetchFundamentals, FUND_IDS, fundamentalsUntil } from './cvm.js';
+import { applyLesson, lessonWords } from './diario.js';
 
 export { fetchFundamentals, fetchRates, fundamentalsUntil, ratesUntil };
 
@@ -45,6 +51,11 @@ const SECOND_OPINION = false;
  * did worse than 0.0.4's with it (it is on in rascunho-fbd2177e).
  */
 const OLD_LESSON = new Set();
+/**
+ * Where the chances come from: the logic of 0.0.4 while both options above are off. A journal's lesson is learned
+ * on the chances of one logic and corrects only those (a lesson of other chances is not used).
+ */
+export const MODEL_LOGIC = SECOND_OPINION || OLD_LESSON.size ? 'pacote-2026-11-09' : '0.0.4';
 
 /** Ways of reading the chart: the size of each candle and how far ahead the reading looks. */
 export const PROFILES = {
@@ -252,6 +263,16 @@ export function studyGroup(histories, { profile, market, rates = null, fundament
 	return { profile: P.id, pool, model, today, market: marketState(market, P), prepared: Object.fromEntries(items.map((i) => [i.h.ticker, i.prep])) };
 }
 
+/**
+ * The chance corrected by the robot's journal (diario.js): only when its lesson is in use (apply: it passed its
+ * test) and was learned on chances of this same logic. The model's own chance stays in beforeJournal.
+ */
+function withJournal(f, journal, kind, profile) {
+	const lesson = journal?.apply && journal.logic === MODEL_LOGIC ? (journal.lessons?.[profile]?.[kind] ?? null) : null;
+	if (!f || !lesson) return f;
+	return { ...f, beforeJournal: f.p, p: applyLesson(f.p, lesson), journal: { asOf: journal.asOf, ...lessonWords(lesson), recent: lesson.recent, beta: lesson.beta } };
+}
+
 /** Today's picture of an asset outside its group's study (searched by code): the same measures, compared with the group's last day. */
 function pictureOf(prep, history, model) {
 	if (!model?.cross) return null;
@@ -265,8 +286,9 @@ function pictureOf(prep, history, model) {
  * (today's features, from studyGroup) or rates: for the learned chance. Without the pool the strategies' evidence
  * is the asset's own; without the model there is no learned chance, and the bot does not act. today: what the
  * group's study knows of the asset today (studyGroup's today[ticker]): the second opinion and the P/VP shown.
+ * journal: the robot's journal (diario.js), whose lesson corrects the chance when it is in use.
  */
-export function analyze(history, { profile = 'swing', mode = 'ponderada', kind = null, market = null, pool = null, prepared = null, model = null, picture = null, rates = null, today = null } = {}) {
+export function analyze(history, { profile = 'swing', mode = 'ponderada', kind = null, market = null, pool = null, prepared = null, model = null, picture = null, rates = null, today = null, journal = null } = {}) {
 	const prep = prepared ?? prepare(history, profile);
 	const { P, bars, x, fwd, signals } = prep;
 	const last = x.n - 1;
@@ -287,7 +309,7 @@ export function analyze(history, { profile = 'swing', mode = 'ponderada', kind =
 	const ownRatio = volRatio(history.candles);
 	const scale = Math.max(1, Number.isFinite(ownRatio) ? ownRatio : 1, Number.isFinite(marketNow?.volRatio) ? marketNow.volRatio : 1);
 	const projection = monteCarlo(x.c, { horizon: P.horizon, drift: 0, lookback: P.lookback, scale });
-	const learned = model ? forecast(model, picture ?? pictureOf(prep, history, model), today?.second ?? null) : null;
+	const learned = withJournal(model ? forecast(model, picture ?? pictureOf(prep, history, model), today?.second ?? null) : null, journal, group.id, P.id);
 	const book = today?.book ?? null;
 
 	const patternStudy = studyPatterns(x.patterns, fwd);
@@ -399,16 +421,44 @@ export async function groupStudy(kind, { force = false, onProgress } = {}) {
 /**
  * The ranking of a group in one profile: every asset with today's learned chance of doing better than the
  * group's average, highest first. Each row carries what robo.decide() needs (forecast, kind, group, market, profile).
+ * journal: the robot's journal, whose lesson corrects the chances when it is in use.
  */
-export function ranking(study, profile) {
+export function ranking(study, profile, journal = null) {
 	const s = study?.studies?.[profile];
 	if (!s?.model) return [];
 	const g = GROUPS[study.kind];
 	const group = { id: g.id, name: g.name, the: g.the, inThe: g.inThe, market: g.market, marketName: g.marketName };
 	return Object.values(s.today)
-		.map((t) => ({ ...t, kind: study.kind, segment: SEGMENTS[t.ticker] ?? null, group, market: s.market, profile: PROFILES[profile], forecast: forecast(s.model, t.x, t.second) }))
+		.map((t) => ({ ...t, kind: study.kind, segment: SEGMENTS[t.ticker] ?? null, group, market: s.market, profile: PROFILES[profile], forecast: withJournal(forecast(s.model, t.x, t.second), journal, study.kind, profile) }))
 		.filter((r) => r.forecast)
 		.sort((a, b) => b.forecast.p - a.forecast.p);
+}
+
+/**
+ * One day of the robot's journal (diario.js): the model's chance for every asset of both groups in the three
+ * profiles, each group studied with every history cut at `date` (nothing after it reaches the study). histories:
+ * whole, by ticker (the groups' members and their index funds). Also how the model checked itself and the market,
+ * which the robot's rules need. The chances are the model's own (no journal lesson: that is learned from these).
+ */
+export function journalEntry(histories, date) {
+	const profiles = {};
+	for (const p of Object.keys(PROFILES)) {
+		profiles[p] = {};
+		for (const [kind, g] of Object.entries(GROUPS)) {
+			const hs = g.members.filter((t) => histories[t]).map((t) => historyUntil(histories[t], date)).filter((h) => h.candles.length);
+			const market = histories[g.market] ? historyUntil(histories[g.market], date) : null;
+			const s = studyGroup(hs, { profile: p, market: market?.candles.length ? market : null });
+			const rows = ranking({ kind, studies: { [p]: s } }, p);
+			if (!rows.length) continue;
+			if (s.model.trainedUntil > date) throw new Error(`Vazou futuro no modelo ${kind} ${p} ${date}`);
+			profiles[p][kind] = {
+				confidence: s.model.confidence,
+				market: s.market ? { trend: s.market.trend, turn: s.market.turn ?? 0, agitated: Boolean(s.market.agitated) } : null,
+				rows: rows.map((r) => [r.ticker, Math.round(r.forecast.p * 1e6) / 1e6])
+			};
+		}
+	}
+	return { date, profiles };
 }
 
 /** Kept for the 0.0.2 callers: the pooled evidence of the group in the three profiles. */
@@ -417,7 +467,7 @@ export async function groupPools(kind, options = {}) {
 	return study ? Object.fromEntries(Object.entries(study.studies).map(([p, s]) => [p, s.pool])) : null;
 }
 
-export async function analyzeTicker(ticker, { profile = 'swing', mode = 'ponderada', force = false, onProgress } = {}) {
+export async function analyzeTicker(ticker, { profile = 'swing', mode = 'ponderada', force = false, onProgress, journal = null } = {}) {
 	const history = await fetchHistory(ticker, { force });
 	const kind = kindOf(history.ticker, history.name);
 	const group = GROUPS[kind];
@@ -425,5 +475,5 @@ export async function analyzeTicker(ticker, { profile = 'swing', mode = 'pondera
 	const study = await groupStudy(kind, { force, onProgress }).catch(() => null);
 	const s = study?.studies?.[profile];
 	const today = s?.today?.[history.ticker] ?? null;
-	return analyze(history, { profile, mode, kind, market, pool: s?.pool ?? null, model: s?.model ?? null, picture: today?.x ?? null, today });
+	return analyze(history, { profile, mode, kind, market, pool: s?.pool ?? null, model: s?.model ?? null, picture: today?.x ?? null, today, journal });
 }

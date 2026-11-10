@@ -7,8 +7,9 @@
 
 // First: on the GitHub Pages site, it answers the data requests from the files published with the page.
 import { explainOnline, ONLINE, siteInfo } from './estatico.js';
-import { analyzeTicker, DEFAULT_WATCHLIST, ENGINE_DRAFT, ENGINE_VERSION, groupStudy, MODES, PROFILES, ranking } from './motor/analise.js';
+import { analyzeTicker, DEFAULT_WATCHLIST, ENGINE_DRAFT, ENGINE_VERSION, groupStudy, MODEL_LOGIC, MODES, PROFILES, ranking } from './motor/analise.js';
 import { cleanTicker, looksLikeTicker } from './motor/dados.js';
+import { getText } from './motor/rede.js';
 import { load, save } from './motor/armazem.js';
 import { compactMoney, dateBr, money, num, pct, points } from './motor/formato.js';
 import { GROUPS } from './motor/mercado.js';
@@ -77,6 +78,7 @@ function plainReasons(r, d) {
 	}
 	if (f) {
 		const a = f.analogs;
+		if (f.journal) out.push(`A chance foi corrigida pelo diário do robô: o modelo dizia ${chance(f.beforeJournal)}; no último ano, ele ${f.journal.trust}.`);
 		out.push(`Nas ${a.n} situações mais parecidas do último ano, ${a.beat} renderam mais que ${averageOf(r.group)}.`);
 		for (const x of f.drivers.slice(0, 3)) out.push(`${x.effect > 0 ? 'Ajuda' : 'Pesa contra'}: ${x.text}.`);
 	}
@@ -90,7 +92,42 @@ function shortReason(r, d) {
 	return `${top.effect > 0 ? '↑' : '↓'} ${top.text}`;
 }
 
-const HONEST = 'O robô está em teste. Nos testes às cegas feitos até agora, nenhuma versão provou que escolhe melhor que o resto: a ordem do Top 10 ainda pode ser sorte. Use como estudo, não como ordem.';
+// ------------------------------------------------------------------------------------------- the journal
+
+/**
+ * The robot's journal (motor/diario.js, since 10/11/2026): every trading day it writes its chances down, checks them
+ * when the horizon passes, and learns from its own record how far to trust them. Its file says how the last bets
+ * that came due turned out and, when the lesson passed its test (apply), the lesson that corrects today's chances.
+ * On this computer it comes from ferramentas/servidor.mjs (/diario/licao.json, the journal sealed here); on the site,
+ * from dados/diario.json (made by GitHub every weekday); in the phone app, from the site. Without it, nothing changes.
+ */
+const JOURNAL_ONLINE = 'https://megashooterx.github.io/PraiaVelas/dados/diario.json';
+let journal;
+async function loadJournal() {
+	if (journal !== undefined) return journal;
+	try {
+		if (globalThis.Capacitor?.isNativePlatform?.()) journal = JSON.parse(await getText(JOURNAL_ONLINE));
+		else {
+			const r = await fetch(ONLINE ? new URL('dados/diario.json', document.baseURI).href : '/diario/licao.json', { cache: 'no-store' });
+			journal = r.ok ? await r.json() : null;
+		}
+	} catch {
+		journal = null;
+	}
+	return journal;
+}
+
+/** How the robot did in the last bet of this horizon that came due: a line for the start screen. */
+function journalLine(j, profile) {
+	const last = j?.last?.[profile];
+	if (!last?.n) return '';
+	const sign = last.spread >= 0 ? 'a mais' : 'a menos';
+	const redone = last.refeito ? ' (refeito com os dados até aquele dia)' : '';
+	const fixed = j.apply ? ' As chances de hoje já vêm corrigidas pelo que ele acertou e errou.' : '';
+	return `<p class="mercado-linha diario-linha">Como o robô foi: no Top 10 de ${HORIZON[profile]} de ${dateBr(last.date)}${redone}, <b>${last.beat} de ${last.n}</b> renderam mais que a média do grupo até ${dateBr(last.end)}, e o Top 10 rendeu <b class="${tone(last.spread)}">${pct(Math.abs(last.spread), 1, false)} ${sign}</b> que todos.${fixed}</p>`;
+}
+
+const HONEST ='O robô está em teste. Nos testes às cegas feitos até agora, nenhuma versão provou que escolhe melhor que o resto: a ordem do Top 10 ainda pode ser sorte. Use como estudo, não como ordem.';
 
 // ------------------------------------------------------------------------------------------- state
 
@@ -117,6 +154,16 @@ settings.layersV = 2;
 settings.layers = { medias: false, bandas: false, padroes: false, projecao: true, ...(settings.layers ?? {}) };
 if (!PROFILES[settings.profile]) settings.profile = 'swing';
 if (!MODES[settings.mode]) settings.mode = 'ponderada';
+// A group study kept by another logic of the chances (a draft that changed it, within its 6 hours) is not this
+// one's: on 09/11/2026 the screen showed the package's chances, kept an hour before, under the same key.
+try {
+	if (load('logica-estudo') !== MODEL_LOGIC) {
+		for (const k of Object.keys(globalThis.localStorage ?? {})) if (k.startsWith('cache:estudo:')) localStorage.removeItem(k);
+		save('logica-estudo', MODEL_LOGIC);
+	}
+} catch {
+	// No storage: nothing kept to clear.
+}
 let watchlist = load('lista', DEFAULT_WATCHLIST);
 let scope = load('varredura', 'todos');
 if (!['todos', 'FII', 'Ação', 'lista'].includes(scope)) scope = 'todos';
@@ -186,7 +233,7 @@ function item(x, position) {
 	</button>`;
 }
 
-function renderList(rows, markets, loading) {
+function renderList(rows, markets, loading, j = null) {
 	const P = PROFILES[settings.profile];
 	const buy = rows.filter((x) => x.d.action === 'COMPRAR').length;
 	const anyProven = rows.some((x) => x.r.forecast.confidence !== 'baixa');
@@ -204,7 +251,8 @@ function renderList(rows, markets, loading) {
 		<p class="mercado-linha">Chance de render mais que a média do grupo em <b>${HORIZON[P.id]}</b>, com dividendos (FIIs contra FIIs, ações contra ações).</p>
 		${Object.entries(markets)
 			.map(([kind, m]) => `<p class="mercado-linha">Mercado de ${groupWords(kind)}: <b class="${m ? tone(m.trend || m.turn) : ''}">${marketWords(m)}</b></p>`)
-			.join('')}`;
+			.join('')}
+		${loading ? '' : journalLine(j, P.id)}`;
 	const top = rows.slice(0, 10);
 	const rest = rows.slice(10);
 	$('v-lista').innerHTML = top.length
@@ -233,6 +281,7 @@ async function showList() {
 	renderList([], {}, true);
 	const rows = [];
 	const markets = {};
+	const j = await loadJournal();
 	for (const kind of kinds) {
 		if (id !== request) return;
 		try {
@@ -240,14 +289,14 @@ async function showList() {
 			if (id !== request) return;
 			status('');
 			markets[kind] = study?.studies?.[settings.profile]?.market ?? null;
-			for (const r of ranking(study, settings.profile)) rows.push({ r, d: decide(r) });
+			for (const r of ranking(study, settings.profile, j)) rows.push({ r, d: decide(r) });
 		} catch (error) {
 			status(`Não deu para estudar os ${groupWords(kind)}: ${error.message}`, true);
 		}
 	}
 	if (id !== request) return;
 	const shown = (scope === 'lista' ? rows.filter((x) => watchlist.includes(x.r.ticker)) : rows).sort((a, b) => b.r.forecast.p - a.r.forecast.p);
-	renderList(shown, markets, false);
+	renderList(shown, markets, false, j);
 	$('recarregar').classList.remove('girando');
 }
 
@@ -330,7 +379,7 @@ function renderKpis(r) {
 	const f = r.forecast;
 	const kpi = (label, value, detail, cls = '') => `<div class="kpi"><span>${label}</span><b class="${cls}">${value}</b><small>${detail}</small></div>`;
 	return `<div class="kpis">
-		${kpi('Chance > grupo', f ? chance(f.p) : '—', f ? `modelo ${chance(f.raw)} · média ${chance(f.base)}` : 'sem modelo')}
+		${kpi('Chance > grupo', f ? chance(f.p) : '—', f ? (f.journal ? `modelo ${chance(f.beforeJournal)} · com o diário` : `modelo ${chance(f.raw)} · média ${chance(f.base)}`) : 'sem modelo')}
 		${kpi('Teste do modelo', f ? f.confidence : '—', f && Number.isFinite(f.skill) ? `skill ${num(f.skill, 3)}` : 'sem dados')}
 		${kpi('Viés (estratégias)', v.label, `nota ${num(v.score, 2)}`, `t-${v.tone}`)}
 		${kpi(r.group.market, m ? (m.trend > 0 ? 'em alta' : m.trend < 0 ? 'em queda' : 'virando') : '—', m ? `agitação ${num(m.volRatio, 2)}×` : 'sem dado', m ? tone(m.trend) : '')}
@@ -363,7 +412,8 @@ function renderLearned(r) {
 			.slice(0, 8)
 			.map((x) => `<tr><td class="esq">${escape(x.text)}</td><td class="${x.effect > 0 ? 'sobe' : 'desce'}">${x.effect > 0 ? '+' : ''}${num(x.effect, 2)}</td></tr>`)
 			.join('')}</table>
-		<table class="tabela"><tr><th>Situação parecida</th><th>Data</th><th>Contra a média</th></tr>${ex}</table>`
+		<table class="tabela"><tr><th>Situação parecida</th><th>Data</th><th>Contra a média</th></tr>${ex}</table>
+		${f.journal ? `<p class="apagado">Diário do robô: o modelo dizia ${chance(f.beforeJournal)}, a chance mostrada é ${chance(f.p)}. Com os dias conferidos até ${dateBr(f.journal.asOf)}, ele ${escape(f.journal.trust)} (60% vira ${chance(f.journal.sixty)}).</p>` : ''}`
 	);
 }
 
@@ -493,7 +543,7 @@ function render(r, place) {
 async function placeOf(r) {
 	try {
 		const study = await groupStudy(r.kind);
-		const list = ranking(study, settings.profile);
+		const list = ranking(study, settings.profile, await loadJournal());
 		const i = list.findIndex((x) => x.ticker === r.ticker);
 		return i >= 0 ? `${i + 1}º de ${list.length} ${groupWords(r.kind)}` : '';
 	} catch {
@@ -518,7 +568,7 @@ async function run(force = false) {
 		if (id === request && done < total) status(progressWords(null, done, total, who));
 	};
 	try {
-		const result = await analyzeTicker(ticker, { profile: settings.profile, mode: settings.mode, force, onProgress });
+		const result = await analyzeTicker(ticker, { profile: settings.profile, mode: settings.mode, force, onProgress, journal: await loadJournal() });
 		if (id !== request) return;
 		const place = await placeOf(result);
 		if (id !== request) return;

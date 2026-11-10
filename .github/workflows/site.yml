@@ -6,6 +6,8 @@
 # let a page of another site read them directly. If too many assets fail to download, the job fails and the site of
 # the day before stays up.
 #
+# It also writes the robot's journal for the app (how the last bets that came due turned out): a few seconds.
+#
 # GitHub turns off scheduled jobs of a repository with no new commit for 60 days: a push turns it back on.
 
 name: Site
@@ -29,6 +31,7 @@ concurrency:
 jobs:
   site:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     environment:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}

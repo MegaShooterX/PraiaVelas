@@ -1,0 +1,36 @@
+{
+ "madeAt": "2026-11-10T02:48:12.388Z",
+ "engine": "rascunho-caf39bc4",
+ "passed": false,
+ "criteria": [
+  {
+   "id": "calibragem",
+   "text": "Chances mais honestas (log-loss menor) com a lição em pelo menos 2 dos 3 prazos",
+   "value": "1 de 3",
+   "passed": false,
+   "detail": [
+    {
+     "profile": "curto",
+     "lesson": 0.692320039269959,
+     "raw": 0.6920791353490136
+    },
+    {
+     "profile": "swing",
+     "lesson": 0.6933092793769875,
+     "raw": 0.6931786501227066
+    },
+    {
+     "profile": "posicao",
+     "lesson": 0.695356172219319,
+     "raw": 0.6962399995977935
+    }
+   ]
+  },
+  {
+   "id": "top10",
+   "text": "O Top 10 de 1 mês com a lição rende pelo menos o mesmo que sem ela (diferença média ≥ 0)",
+   "value": "+0,169%",
+   "passed": true
+  }
+ ]
+}

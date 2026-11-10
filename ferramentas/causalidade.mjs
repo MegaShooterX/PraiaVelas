@@ -8,6 +8,11 @@
 // report only from the day it could be read, not from the month it is about. The CDI and the Selic (for the second
 // opinion, since the draft of 09/11/2026) go to it the same way: uncut, scrambled after the cut.
 //
+// The robot's journal (since the draft of 10/11/2026): each day of it (journalEntry) gets the whole histories and
+// cuts them itself, so it is given the scrambled ones, uncut; its chances must come out the same. And its lesson
+// (lessonFor) is given records whose future had not happened yet by the day, with their results scrambled: the
+// lesson must not change, and a day is not scored before its horizon (scoreDay).
+//
 //   node ferramentas/causalidade.mjs
 //
 // Uses the quotes already kept in D:\Projetos\PraiaVelas\cache (PRAIAVELAS_SAIDA changes it).
@@ -19,6 +24,7 @@ import * as engine from '../app/motor/analise.js';
 import { fetchHistory, historyUntil } from '../app/motor/dados.js';
 import { forecast } from '../app/motor/aprendizado.js';
 import { GROUPS } from '../app/motor/mercado.js';
+const journal = await import('../app/motor/diario.js').catch(() => null);
 // The CVM reports exist only in engines that read them (0.0.5, frozen in D:\Projetos\PraiaVelas\versoes): without them the check runs as before.
 const cvm = await import('../app/motor/cvm.js').catch(() => null);
 
@@ -126,6 +132,47 @@ for (const date of CUTS) {
 		}
 	}
 	console.log(`${date}: ${checks} conferências até aqui, ${differ.length} diferenças`);
+}
+
+// ------------------------------------------------------------------------------------------- the journal
+let journalChecks = 0;
+if (journal && engine.journalEntry) {
+	for (const date of CUTS) {
+		const noisy = Object.fromEntries(Object.entries(histories).map(([t, h]) => [t, scrambled(h, date)]));
+		const A = engine.journalEntry(histories, date);
+		const B = engine.journalEntry(noisy, date);
+		for (const [p, kinds] of Object.entries(A.profiles)) {
+			for (const [kind, a] of Object.entries(kinds)) {
+				const b = B.profiles[p]?.[kind];
+				if (!b || b.rows.length !== a.rows.length || b.confidence !== a.confidence) {
+					differ.push(`diário ${date} ${p} ${kind}: estudo diferente`);
+					continue;
+				}
+				a.rows.forEach(([t, v], k) => {
+					if (b.rows[k][0] !== t) differ.push(`diário ${date} ${p} ${kind}: ordem diferente em ${t}`);
+					same(v, b.rows[k][1], `diário ${date} ${p} ${kind} ${t}`);
+					journalChecks++;
+				});
+			}
+		}
+	}
+	// The lesson: records on days 0..999; on day 700 only those whose horizon had passed may count.
+	for (const profile of Object.keys(journal.JOURNAL_HORIZON)) {
+		const h = journal.JOURNAL_HORIZON[profile];
+		const base = Array.from({ length: 6000 }, (_, k) => ({ i: k % 1000, p: 0.3 + 0.4 * random(), y: random() < 0.5 ? 1 : 0 }));
+		for (const r of base) if (r.p > 0.55 && random() < 0.3) r.y = 1;
+		const asOf = 700;
+		const noisy = base.map((r) => (r.i + h <= asOf ? { ...r } : { ...r, p: random(), y: random() < 0.9 ? 1 : 0 }));
+		const L1 = journal.lessonFor(base.map((r) => ({ ...r })), asOf, profile);
+		const L2 = journal.lessonFor(noisy, asOf, profile);
+		for (const k of ['alpha', 'beta', 'centre']) same(L1[k], L2[k], `lição ${profile} ${k}`);
+		journalChecks += 3;
+	}
+	const cal = histories.HGLG11.candles.map((c) => c.date);
+	const at = cal.indexOf('2026-09-01');
+	if (journal.scoreDay([['HGLG11', 0.5]], histories, cal, at, 21, at + 20) !== null) differ.push('diário: um dia conferido antes do prazo vencer');
+	journalChecks++;
+	console.log(`Diário: ${journalChecks} conferências (as chances de cada dia, a lição e o prazo).`);
 }
 
 console.log(`\nMotor ${ENGINE_VERSION}${engine.ENGINE_DRAFT ? ' (rascunho)' : ''}: ${checks} conferências em ${CUTS.length} datas de corte (${seconds} com a segunda opinião), maior diferença ${worst.toExponential(1)}.`);

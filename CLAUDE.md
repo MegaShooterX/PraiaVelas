@@ -24,6 +24,13 @@
 - O robô roda pela tela inicial do app (o "Top 10 de agora") e no terminal: `npm run robo` (`ferramentas/robo.mjs`). Ele decide com o último ano (2 anos no prazo de 3 meses), porque o que é mais antigo vale pouco (Rhuan, 09/11/2026: "qualquer coisa de 2025 pra trás é muito antigo"). Na 0.0.3, o que era mais antigo entrava como sazonalidade; desde a 0.0.4, entra como ponto de partida. Desde a 0.0.4 a chance é de render mais que a média do grupo (FIIs contra FIIs, ações contra ações), não mais que o CDI.
 - **O app roda o que provou mais, não o mais novo.** Em 09/11/2026 a 0.0.5 (P/VP da CVM no modelo) foi testada, não foi melhor, e não entrou no app; o código dela está em `D:\Projetos\PraiaVelas\versoes\0.0.5`.
 - Antes de congelar uma versão: `node ferramentas/causalidade.mjs` (a prova de que o motor não olha o futuro).
+- **Diário do robô** (Rhuan, 10/11/2026: "diz depois se acertou e errou, com isso melhora a análise e tenta de novo no próximo dia"):
+  - Todo dia útil, `node ferramentas/diario.mjs hoje` lacra as chances do fechamento (a do modelo e a corrigida pela lição), confere as apostas lacradas que venceram e refaz a lição e os relatórios, em `D:\Projetos\PraiaVelas\diario\<motor>` (no PC, http://localhost:5190/diario/).
+  - Um dia lacrado nunca é reescrito. Dia perdido é vivido depois e marcado como refeito: entra na lição, não na prova.
+  - O passado (todo pregão desde 02/01/2019, cada um só com os dados até ele) é vivido e lacrado uma vez (`passado`) e aberto uma vez (`revelar-passado`), com o `plano.md` escrito antes. O veredito não se escreve de novo.
+  - A lição corrige a chance no app só se passou no teste: `apply` no `licao.json` do PC; no site, `ferramentas/diario-veredito.json` (cópia do veredito do PC).
+  - Motor novo (outro hash) = diário novo, em outra pasta, com o passado vivido de novo.
+- **Rodar pouco, concluir rápido** (Rhuan, 10/11/2026: "não é pra ficar rodando tanto, é mais pra aprimorar o algoritmo msm! mas tem que concluir o aprendizado logo!"). Ideia nova para o modelo vai para `node ferramentas/bancada.mjs` (uma data a cada 5 pregões, cerca de 1 minuto por variante), com plano escrito antes, e o veredito sai na hora. Nada de rodadas longas sem necessidade.
 - Relatório de experimento sai em duas versões: `relatorio-lite.html` (uma tela) e `relatorio-avancado.html` (em abas), feitos por `ferramentas/relatorio.mjs`. Com o app aberto, ficam em http://localhost:5190/experimentos/.
 - APK só quando o Rhuan pedir: `npm run apk` (`ferramentas/apk.mjs`, mesmo caminho do PraiaPuzzle).
 - Textos da tela em português do Brasil; código em inglês, comentários explicando o porquê.

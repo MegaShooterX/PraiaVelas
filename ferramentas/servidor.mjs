@@ -9,6 +9,9 @@
 // /experimentos/<pasta>/relatorio-lite.html (or -avancado) shows the reports of the blind tests, read-only, from
 // D:\Projetos\PraiaVelas\experimentos (PRAIAVELAS_SAIDA changes it): they are kept off the Google Drive.
 //
+// /diario/ shows the robot's journal (ferramentas/diario.mjs): its two reports and licao.json, which the app on this
+// computer reads to correct the chances when the journal's lesson is in use. From D:\Projetos\PraiaVelas\diario.
+//
 // /experimentos/ also has buttons for a new study (POST /acoes/<nome>): only the fixed actions in ACTIONS run, one
 // at a time, and only when asked from this computer by a page of this server (not from the network, not from
 // another site).
@@ -26,18 +29,26 @@ import { ALLOWED_HOSTS } from '../app/motor/rede.js';
 
 const project = fileURLToPath(new URL('../', import.meta.url));
 const tool = (args) => [join(project, 'ferramentas', 'experimento.mjs'), ...args];
+const journalTool = (args) => [join(project, 'ferramentas', 'diario.mjs'), ...args];
 
 /** The studies the buttons may start. Each is a list of node runs of the project's own tools. */
 const ACTIONS = {
 	'lacrar-hoje': {
 		label: 'Lacrar as decisões de hoje',
-		runs: async () => [tool(['lacrar-futuro'])]
+		// The weekly proof's two series: the logic of 0.0.4 (the app's chances) and the package beside it. The app's own
+		// engine is sealed every day by the robot's journal.
+		runs: async () => [tool(['lacrar-futuro', '--versao', 'rascunho-8f266276']), tool(['lacrar-futuro', '--versao', 'rascunho-fbd2177e'])]
 	},
 	atualizar: {
 		label: 'Atualizar os resultados',
 		// Every test with something still open (a horizon not reached, or measured only in part) is opened again, and
 		// the future tests of each engine are added up (experimento.mjs atualizar, acumulado).
 		runs: async () => [tool(['atualizar']), tool(['acumulado'])]
+	},
+	diario: {
+		label: 'Atualizar o diário',
+		// The day of the last close in the robot's journal (sealed once), and what came due.
+		runs: async () => [journalTool(['hoje'])]
 	}
 };
 let job = null;
@@ -72,6 +83,15 @@ function allowed(req) {
 
 const root = fileURLToPath(new URL('../app/', import.meta.url));
 const experiments = join(process.env.PRAIAVELAS_SAIDA ?? 'D:\\Projetos\\PraiaVelas', 'experimentos');
+const journals = join(process.env.PRAIAVELAS_SAIDA ?? 'D:\\Projetos\\PraiaVelas', 'diario');
+/** The folder of the current engine's journal (written by diario.mjs), or null before it exists. */
+async function journalFolder() {
+	try {
+		return JSON.parse(await readFile(join(journals, 'atual.json'), 'utf8')).folder;
+	} catch {
+		return null;
+	}
+}
 const port = Number(process.env.PORT ?? 5190);
 const AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130 Safari/537.36';
 const types = {
@@ -170,7 +190,7 @@ th{color:var(--muted);font-size:9.5px;text-transform:uppercase;letter-spacing:.0
 td:first-child,th:first-child,.esq{text-align:left}td small{display:block;color:var(--muted);font-size:10.5px}
 p{margin:0;padding:2px 4px;color:var(--muted);font-size:10.5px;border-top:1px solid var(--line)}
 </style></head><body>
-<div class="bar"><h1>Testes às cegas</h1><span>${rows.length} testes · toque no nome para o relatório</span><a href="/">← App (top 10 de agora)</a></div>
+<div class="bar"><h1>Testes às cegas</h1><span>${rows.length} testes · toque no nome para o relatório</span><a href="/diario/">Diário do robô →</a><a href="/" style="margin-left:8px">← App</a></div>
 <div class="acoes">${actions}</div>
 <div class="ajuda"><b>Lacrar as decisões de hoje</b>: o robô decide agora, para 1 semana, 1 mês e 3 meses, e o resultado só abre quando cada prazo passar. <b>Atualizar os resultados</b>: abre os testes cujo prazo já venceu e refaz os relatórios.</div>
 ${status}
@@ -213,7 +233,10 @@ if (siteArg > 0) {
 		return res.writeHead(303, { location: '/experimentos/' }).end();
 	}
 	const path = decodeURIComponent(address.pathname);
-	const [base, rest] = path.startsWith('/experimentos/') ? [experiments, path.slice('/experimentos'.length)] : [root, path];
+	if (path === '/diario' || path === '/diario/') return res.writeHead(302, { location: '/diario/relatorio-lite.html' }).end();
+	const journal = path.startsWith('/diario/') ? await journalFolder() : null;
+	if (path.startsWith('/diario/') && !journal) return res.writeHead(404, { 'content-type': types['.json'] }).end('{"erro":"o diário ainda não existe"}');
+	const [base, rest] = path.startsWith('/experimentos/') ? [experiments, path.slice('/experimentos'.length)] : journal ? [journal, path.slice('/diario'.length)] : [root, path];
 	const file = normalize(join(base, rest === '/' ? 'index.html' : rest));
 	if (!file.startsWith(normalize(base))) {
 		res.writeHead(403).end();

@@ -9,12 +9,12 @@ O sistema tem que rodar no celular (APK), no navegador e no PC. JavaScript puro,
 | Pasta | O que tem |
 |---|---|
 | `app/` | O aplicativo inteiro: `index.html`, `estilo.css`, `principal.js` (a tela), `grafico.js` (gráfico de candles em canvas, sem biblioteca) |
-| `app/motor/` | O estudo, sem nada de tela: dados, juros (Banco Central), indicadores, candles, estratégias, backtest, mercado, aprendizado (o modelo que ordena o Top 10), projeção, robô e `analise.js`, que junta tudo |
-| `ferramentas/` | Os programas de terminal:<br>• `site.mjs`: monta o site do GitHub Pages com os dados do dia.<br>• `servidor.mjs`: serve o app em http://localhost:5190, faz o papel de porta para o Yahoo e o Banco Central, e mostra os testes em `/experimentos/`, com os botões de novo estudo.<br>• `robo.mjs`: o robô no terminal.<br>• `analisar.mjs`: o estudo de um ativo.<br>• `experimento.mjs`: o teste às cegas.<br>• `relatorio.mjs`: os relatórios lite e avançado.<br>• `causalidade.mjs`: a prova de que o motor não olha o futuro, rodada antes de congelar.<br>• `apk.mjs`: o APK. |
+| `app/motor/` | O estudo, sem nada de tela: dados, juros (Banco Central), indicadores, candles, estratégias, backtest, mercado, aprendizado (o modelo que ordena o Top 10), projeção, robô, diário (a lição que o robô tira dos próprios acertos e erros) e `analise.js`, que junta tudo |
+| `ferramentas/` | Os programas de terminal:<br>• `bancada.mjs`: o teste rápido de variantes do modelo (uma data a cada 5 pregões, minutos).<br>• `diario.mjs`: o diário do robô (lacra cada pregão, confere o que venceu, aprende); usa `diario-nucleo.mjs`, `diario-trabalho.mjs` (um por núcleo do PC) e `diario-relatorio.mjs`.<br>• `site.mjs`: monta o site do GitHub Pages com os dados do dia.<br>• `servidor.mjs`: serve o app em http://localhost:5190, faz o papel de porta para o Yahoo e o Banco Central, e mostra os testes em `/experimentos/`, com os botões de novo estudo.<br>• `robo.mjs`: o robô no terminal.<br>• `analisar.mjs`: o estudo de um ativo.<br>• `experimento.mjs`: o teste às cegas.<br>• `relatorio.mjs`: os relatórios lite e avançado.<br>• `causalidade.mjs`: a prova de que o motor não olha o futuro, rodada antes de congelar.<br>• `apk.mjs`: o APK. |
 | `celular/` | A configuração do app Android (`capacitor.config.json`) |
 | `docs/` | Esta parte técnica |
 
-Fora do Drive, em `D:\Projetos\PraiaVelas` (`PRAIAVELAS_SAIDA` muda a pasta): `cache` (cotações do terminal), `versoes` (motores congelados) e `experimentos` (lacres e resultados). No app, o cache é o `localStorage` (6 horas).
+Fora do Drive, em `D:\Projetos\PraiaVelas` (`PRAIAVELAS_SAIDA` muda a pasta): `cache` (cotações do terminal), `versoes` (motores congelados), `experimentos` (lacres e resultados) e `diario` (o diário do robô, uma pasta por motor). No app, o cache é o `localStorage` (6 horas).
 
 ## Versões
 
@@ -28,7 +28,8 @@ Sobem de 0.0.1 em 0.0.1, até 0.0.99, e **só quando o Rhuan pedir** (09/11/2026
 | 0.0.4 | A chance de render mais que a média do grupo, com 8 medidas comparadas entre os ativos e os anos antigos como ponto de partida (09/11/2026) | `versoes\0.0.4` (hash 5febf4…) |
 | 0.0.5 | A 0.0.4 mais, nos FIIs, duas medidas dos relatórios mensais à CVM: P/VP e a mudança do patrimônio por cota em 12 meses (09/11/2026). Testada e não adotada: não foi melhor que a 0.0.4 e baixa 10 MB da CVM. | `versoes\0.0.5` (hash ac66ec…) |
 | rascunho | O pacote de 09/11/2026: a 0.0.4 com a segunda opinião da 0.0.3 e o prazo de 3 meses só com a lição dos anos antigos, e o P/VP na tela. Testado; as duas mudanças do robô não passaram nas suas regras. Lacrado toda sexta ao lado do app. | `versoes\rascunho-fbd2177e` |
-| rascunho | **O que o app usa (0.0.4+):** decide exatamente como a 0.0.4 (as duas mudanças do pacote estão desligadas, `SECOND_OPINION` e `OLD_LESSON` em `analise.js`) e mostra o P/VP dos FIIs. | `versoes\rascunho-8f266276` |
+| rascunho | A lógica da 0.0.4 com o P/VP na tela (as duas mudanças do pacote desligadas, `SECOND_OPINION` e `OLD_LESSON` em `analise.js`). Era o app até 10/11/2026; segue lacrado toda sexta. | `versoes\rascunho-8f266276` |
+| rascunho | **O que o app usa (0.0.4+, desde 10/11/2026):** o mesmo, mais o diário do robô (`diario.js`, `journalEntry` em `analise.js`). A chance do modelo é a mesma da 0.0.4; a lição do diário a corrige só se passou no teste dela. | `versoes\rascunho-caf39bc4` |
 
 Mudou o motor depois de congelar? Congela de novo: é outro rascunho, sem número novo. Teste nunca roda do `app/motor`, só de uma cópia congelada.
 
@@ -43,6 +44,62 @@ No app, só para **mostrar** o P/VP na página do fundo; o robô não usa. Na 0.
 - **Desdobramentos:** o Yahoo divide os preços antigos pelos desdobramentos posteriores. O patrimônio por cota é dividido do mesmo jeito, com os desdobramentos que aparecem nos relatórios: no mesmo mês, o VP cai k vezes e as cotas sobem k vezes, com o patrimônio total igual. É troca de unidade e não diz nada do retorno.
 - **Vacância e inadimplência ficaram de fora** (relatório trimestral): o HSML11 informa 91% de vacância desde o fim de 2025, o KNRI11 0% em todos os trimestres, o BRCR11 pula de 12% para 51% e volta, e a inadimplência é zero em 89% dos imóveis.
 - **Resultado:** os dados não ajudaram. Nos FIIs, no prazo de 1 mês, os 10 de maior chance ficaram iguais aos da 0.0.4 (+0,11% contra +0,12% por mês acima de todos os FIIs, t pareado de −0,08).
+
+## O diário do robô (desde 10/11/2026)
+
+- **O pedido:** "ao fazer o relatório, no dia que executar, ele mapeia novamente e diz depois se acertou e errou, com isso melhora a análise e tenta de novo no próximo dia... (que isso poderia também ser treinado do passado pra trás)" (Rhuan, 10/11/2026).
+- **Cada dia** (`journalEntry` em `analise.js`): a chance do modelo para os 63 ativos nos três prazos, com todos os históricos cortados naquele dia. É a mesma chance do app e dos testes lacrados (no máximo 0,0002 de diferença para o `2026-11-09-top10-app`, das revisões do Yahoo).
+- **A conferência** (`scoreDay` em `diario.js`): quando o prazo vence (5, 21 ou 65 pregões), quem rendeu mais que a média do seu grupo, com dividendos. Nunca antes do prazo.
+- **A lição** (`lessonFor` e `applyLesson`): uma por grupo e prazo, aprendida só com os dias já conferidos.
+  - Regressão logística do acerto sobre o logit da chance: corrigida = sigmoide(alfa + beta × (logit(chance) − centro)). Beta 1 é "confia como está"; 0 é "não sabe"; nunca negativo.
+  - Como o modelo: os dias antigos dão o ponto de partida, o último ano decide (2 anos no prazo de 3 meses), lambda 10, cada dia pesando 1/prazo.
+  - Dentro de um grupo a ordem não muda. Muda o quanto ele tem certeza (e por isso quando compra) e a mistura de FIIs e ações no Top 10.
+- **O passado vivido** (`diario.mjs passado`): os 1.954 pregões de 02/01/2019 a 06/11/2026, cada um com o motor congelado `rascunho-caf39bc4` e só os dados até ele, em 7,6 minutos com 14 ajudantes em paralelo (`diario-trabalho.mjs`). Lacre `7d697c…`.
+- **O teste** (`revelar-passado`, regras no `plano.md`, escrito antes): **não passou.** A lição entraria no app com as chances mais honestas em 2 dos 3 prazos e o Top 10 de 1 mês sem piorar.
+
+  | Prazo | Dias | Log-loss com a lição × sem | Top 10 − todos, com × sem | 60% ou mais acertou, com × sem |
+  |---|---|---|---|---|
+  | 1 semana | 1.950 | 0,69232 × 0,69208 (pior) | +0,031% × +0,043% | 52% de 317 × 61% de 117 |
+  | 1 mês | 1.934 | 0,69331 × 0,69318 (pior) | +0,098% × −0,072% | 44% de 411 × 49% de 1.318 |
+  | 3 meses | 1.890 | 0,69536 × 0,69624 (melhor) | +0,276% × +0,177% | 33% de 834 × 36% de 1.227 |
+
+  - Ficou em 1 de 3 prazos (a regra pedia 2). O Top 10 de 1 mês melhorou (+0,17%), mas uma regra só não basta.
+  - **O que o teste mostrou além da regra:**
+    - **As chances quase não dizem nada:** o log-loss ficou perto do de uma moeda (0,6931) nos três prazos, com ou sem a lição. Não há o que calibrar.
+    - **A calibragem de 63% era sorte da amostra:** no teste de uma data por mês, quem teve 60% ou mais em 1 mês bateu o grupo em 63% das vezes (65 casos). Vivido todo pregão, foram 49% (1.318 casos, uns 63 independentes).
+    - A lição ajudou em 3 meses e no Top 10 de 1 mês, e atrapalhou em 1 semana. Usar só onde ajudou seria escolher olhando o resultado: fica para o futuro julgar.
+- **Todo dia útil** (`diario.mjs hoje`, pela tarefa "PraiaVelas: robô do dia"):
+  - vive o dia do fechamento (se o Yahoo ainda não tem o fechamento de mais de 5 ativos, espera 10 minutos, até 2 vezes);
+  - corrige com a lição do dia e lacra as duas chances, a do modelo e a corrigida, com o que o robô faria com cada uma e os dois Top 10 (`dias\<data>.json`, SHA-256 em `lacres.jsonl`);
+  - confere os dias lacrados cujo prazo venceu (`placar.json`), escreve `licao.json` (o que o app lê) e os dois relatórios.
+  - Um dia lacrado nunca é reescrito. Dia perdido é vivido depois e marcado como refeito: entra na lição, não na prova.
+- **No app:** a tela inicial mostra a última aposta que venceu ("Como o robô foi: no Top 10 de 1 semana de 30/10, 6 de 10 renderam mais que a média do grupo..."). A chance corrigida só aparece com `apply: true` no `licao.json`, e só sobre a mesma lógica de chance (`MODEL_LOGIC` em `analise.js`). Hoje é `false`.
+  - No PC, o app lê `/diario/licao.json` (o diário lacrado aqui); no site, `dados/diario.json`; no celular, o do site.
+- **No site:** o `site.mjs` vive só os 3 dias que a tela mostra (1 semana, 1 mês e 3 meses atrás), em segundos. Só viveria todos os dias desde 2019 se a lição estivesse em uso; o veredito vem de `ferramentas/diario-veredito.json`, cópia do veredito do PC.
+- **Relatórios** (`diario-relatorio.mjs`), em `D:\Projetos\PraiaVelas\diario\<motor>` e em http://localhost:5190/diario/:
+  - **lite:** o que venceu hoje (acertou ou errou, ativo por ativo), o placar dos dias lacrados, o passado, o que o robô diz hoje nos três prazos e o que ele aprendeu;
+  - **avançado:** abas Resumo, Hoje, Placar, Passado (ano a ano, com e sem a lição), Lição (a confiança ao longo do tempo), Lacres e Plano.
+- **A prova de que não olha o futuro** (`causalidade.mjs`) confere também o diário: cada dia recebe os históricos inteiros, embaralhados depois do dia, e as chances saem iguais; a lição recebe dias ainda não vencidos, embaralhados, e não muda. Conferido que ela pega um diário que lê 5 dias à frente e uma lição que usa dias não vencidos.
+- **Comandos:** `node ferramentas/diario.mjs passado | revelar-passado | hoje | relatorio | conferir`. Motor novo (outro hash) começa outro diário, em outra pasta, com o passado vivido de novo.
+
+## As melhorias do modelo de 10/11/2026 (testadas, nenhuma entrou)
+
+- **Por quê:** o diário mostrou o modelo confiante demais em todos os grupos e prazos, com chances de moeda. As duas coisas apontam para um modelo que segue o barulho de um ano só (um ano tem uns 12 períodos de 1 mês).
+- **As variantes** (só muda `LEARNING` em `aprendizado.js`, congeladas em `versoes`; plano em `D:\Projetos\PraiaVelas\diario\melhorias-2026-11-10\plano.md`, escrito antes):
+  - **firme** (`rascunho-52cd2161`): lambda 30 em vez de 10;
+  - **anos** (`rascunho-e1ffccc2`): um ajuste com todos os anos desde 2017, cada ano pesando metade do seguinte;
+  - **ambos** (`rascunho-54c6c7ee`).
+- **A bancada** (`ferramentas/bancada.mjs`): cada variante vive uma data a cada 5 pregões desde 2019 (391 datas, cerca de 1 minuto cada) e é comparada com as chances lacradas do modelo de hoje nas mesmas datas.
+- **Resultado: nenhuma passou.** A regra pedia o Top 10 de 1 mês melhor que o de hoje com t de pelo menos 1,5, e chances mais honestas em 2 dos 3 prazos.
+
+  | Variante | Top 10 de 1 mês contra o de hoje | Log-loss menor | Top 10 de 3 meses contra o de hoje |
+  |---|---|---|---|
+  | firme | −0,07% (t 0,39) | 3 de 3 | −0,53% (t −1,90) |
+  | anos | −0,02% (t 0,48) | 3 de 3 | −0,37% (t −1,14) |
+  | ambos | −0,16% (t −0,74) | 3 de 3 | −1,32% (t −2,21) |
+
+- **O que isso ensina:** aprender com mais calma deixa a chance mais modesta (e por isso mais honesta), mas não ordena melhor. O limite está no que as 8 medidas sabem, não em como o modelo aprende com elas. Melhorar a ordem pede informação nova, testada do mesmo jeito.
+- **O que se repetiu nas quatro versões:** os 10 melhores FIIs no prazo de 1 semana renderam mais que todos os FIIs (+0,04% a +0,09% por semana). É a mesma pista da 0.0.4, da 0.0.5 e do pacote; o diário vai conferi-la daqui para frente.
 
 ## O site no GitHub Pages
 
@@ -152,9 +209,10 @@ O app junta a prova do grupo baixando os 20 FIIs (ou as 8 ações) na primeira v
 | `futuro-2026-11-06`, `-v0.0.2`, `-v0.0.3` e `-v0.0.4` | 0.0.1 a 0.0.4 | O teste que conta. São decisões do fechamento de 06/11/2026: Curto abre por volta de 13/11, Swing por volta de 07/12, Posição em fevereiro de 2027. A 0.0.3 e a 0.0.4 lacraram o Top 10 de cada prazo. |
 | `2026-11-09-top10-pacote` | rascunho-fbd2177e | O pacote (veja acima). Não provou: no prazo de 1 mês, +0,15% por mês contra todos (t de 0,73); calibragem de 60% ou mais em 63% (156 casos). As duas mudanças do robô não passaram nas suas regras. |
 | `2026-11-09-top10-app` | rascunho-8f266276 | O motor do app (a lógica da 0.0.4 com o P/VP na tela), rodado nos mesmos dados do pacote: +0,15% por mês (t de 0,71), calibragem de 63% (65 casos). |
+| `D:\Projetos\PraiaVelas\diario\rascunho-caf39bc4` | rascunho-caf39bc4 | O diário do robô: os 1.954 pregões de 2019 a 2026 vividos um a um, e a lição tirada dos próprios acertos e erros. A lição não passou (chances mais honestas só em 3 meses; a regra pedia 2 dos 3 prazos) e não entra no app. Mostrou que as chances do modelo quase não dizem nada (log-loss de moeda) e que, vivido todo dia, quem teve 60% ou mais em 1 mês bateu o grupo em 49% das vezes, não 63%. Desde 09/11/2026, um dia lacrado por pregão. |
 | `futuro-2026-11-09-v0.0.5`, `-rascunho-8f266276` e `-rascunho-fbd2177e` | 0.0.5, app e pacote | As decisões do fechamento de 09/11/2026: Curto abre por volta de 16/11, Swing por volta de 08/12, Posição em fevereiro de 2027. |
 
-**A prova semanal:** toda sexta-feira, a tarefa "PraiaVelas: robô do dia" lacra as decisões do fechamento do app e do pacote (`lacrar-futuro`), abre o que venceu (`atualizar`) e soma tudo (`acumulado`). É a prova limpa, que cresce uma semana por vez.
+**A prova semanal:** toda sexta-feira, a tarefa "PraiaVelas: robô do dia" lacra as decisões do fechamento da lógica da 0.0.4 (`rascunho-8f266276`) e do pacote (`lacrar-futuro --versao`), abre o que venceu (`atualizar`) e soma tudo (`acumulado`). É a prova limpa, que cresce uma semana por vez. O diário do robô soma a ela um dia lacrado por pregão.
 
 Novos estudos também saem pela página http://localhost:5190/experimentos/ (com o app aberto no PC):
 - **Lacrar as decisões de hoje:** `lacrar-futuro` com o motor atual congelado.
@@ -168,6 +226,8 @@ node ferramentas/experimento.mjs lacrar --versao X --sem-recente --desde 2019-01
 ## Próximos passos
 
 - Notícias: Google News RSS (`news.google.com/rss/search?q=<CÓDIGO>`) com sentimento por palavras, peso pequeno e avisado, porque não dá para testar no histórico.
+- Melhorar a ordem do Top 10 pede informação nova (as variantes de como aprender não ajudaram, 10/11/2026). Cada ideia passa pela `bancada.mjs`, com plano escrito antes.
+- O diário: a lição volta a ser julgada pelo futuro (cada dia lacra as duas chances). Proposta para um teste novo, só com o aval do Rhuan: a lição só no prazo de 3 meses, onde ajudou no passado.
 - Os FIIs no prazo de 1 semana: foi onde a 0.0.4, a 0.0.5 e o pacote mais separaram os FIIs (t de 2,6, 3,2 e 2,8, fora da régua). A prova semanal do futuro diz se é de verdade.
 - A segunda opinião volta ao app se, na prova semanal, o pacote for melhor que o app.
 - Mais estratégias: estocástico, ADX, Heikin-Ashi, DY contra a própria média, força relativa contra o IFIX.

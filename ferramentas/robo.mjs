@@ -6,7 +6,9 @@
 //   node ferramentas/robo.mjs HGLG11 PETR4             only these (from the same ranking)
 //   [--perfil curto|swing|posicao]
 //
-// Quotes are kept in D:\Projetos\PraiaVelas\cache (PRAIAVELAS_SAIDA changes it), never in the Google Drive.
+// Quotes are kept in D:\Projetos\PraiaVelas\cache (PRAIAVELAS_SAIDA changes it), never in the Google Drive. The
+// robot's journal (ferramentas/diario.mjs) is read from D:\Projetos\PraiaVelas\diario: when its lesson is in use, the
+// chances come corrected, as in the app.
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -16,7 +18,8 @@ import { cleanTicker } from '../app/motor/dados.js';
 import { GROUPS } from '../app/motor/mercado.js';
 import { decide } from '../app/motor/robo.js';
 
-const folder = join(process.env.PRAIAVELAS_SAIDA ?? 'D:\\Projetos\\PraiaVelas', 'cache');
+const out = process.env.PRAIAVELAS_SAIDA ?? 'D:\\Projetos\\PraiaVelas';
+const folder = join(out, 'cache');
 mkdirSync(folder, { recursive: true });
 const fileOf = (key) => join(folder, `${key.replace(/[^a-zA-Z0-9_-]/g, '_')}.json`);
 useStore({ get: (k) => (existsSync(fileOf(k)) ? readFileSync(fileOf(k), 'utf8') : null), set: (k, raw) => writeFileSync(fileOf(k), raw) });
@@ -34,13 +37,23 @@ const SAY = { COMPRAR: 'COMPRAR', VENDER: 'VENDER', 'FICAR DE FORA': 'ESPERAR' }
 const pct = (v) => `${Math.round(v * 100)}%`;
 const marketWords = (m) => (!m ? 'sem leitura' : `${m.trend > 0 ? 'subindo' : m.trend < 0 ? 'caindo' : m.turn > 0 ? 'começando a virar para cima' : m.turn < 0 ? 'começando a virar para baixo' : 'sem direção clara'} e ${m.agitated ? 'instável' : 'calmo'}`);
 
+/** The journal of this computer (null before it exists). */
+const journal = (() => {
+	try {
+		const current = JSON.parse(readFileSync(join(out, 'diario', 'atual.json'), 'utf8'));
+		return JSON.parse(readFileSync(join(current.folder, 'licao.json'), 'utf8'));
+	} catch {
+		return null;
+	}
+})();
+
 const rows = [];
 const markets = {};
 let date = null;
 for (const kind of Object.keys(GROUPS)) {
 	const study = await groupStudy(kind, { force: true });
 	markets[kind] = study?.studies?.[profile]?.market ?? null;
-	for (const r of ranking(study, profile)) {
+	for (const r of ranking(study, profile, journal)) {
 		rows.push({ r, d: decide(r) });
 		date = date && date > r.date ? date : r.date;
 	}
@@ -53,6 +66,8 @@ for (const [kind, m] of Object.entries(markets)) console.log(`Mercado de ${kind 
 const count = (a) => rows.filter((x) => x.d.action === a).length;
 console.log(`Comprar: ${count('COMPRAR')} · Vender: ${count('VENDER')} · Esperar: ${count('FICAR DE FORA')} (de ${rows.length})`);
 if (rows.length && rows.every((x) => x.r.forecast.confidence === 'baixa')) console.log('O modelo ainda não passou no próprio teste: ele ordena, mas não manda comprar.');
+const last = journal?.last?.[profile];
+if (last?.n) console.log(`Diário: no Top 10 de ${HORIZON[profile]} de ${last.date.split('-').reverse().join('/')}${last.refeito ? ' (refeito)' : ''}, ${last.beat} de ${last.n} renderam mais que a média do grupo até ${last.end.split('-').reverse().join('/')} (Top 10 ${last.spread >= 0 ? '+' : ''}${(last.spread * 100).toFixed(2).replace('.', ',')}% sobre todos).${journal.apply ? ' Chances corrigidas pela lição do diário.' : ''}`);
 console.log('');
 for (const [i, { r, d }] of (only.length ? shown : shown.slice(0, 10)).entries()) {
 	const top = r.forecast.drivers[0];

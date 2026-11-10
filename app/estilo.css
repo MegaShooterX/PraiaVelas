@@ -940,6 +940,13 @@ button.marca {
 	font-weight: 600;
 }
 
+/* How the last bet that came due turned out (the robot's journal): set apart by a line, it is about the past. */
+.diario-linha {
+	border-top: 1px solid var(--line);
+	margin-top: 4px;
+	padding-top: 3px;
+}
+
 .lista-robo {
 	display: grid;
 	gap: 1px;

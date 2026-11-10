@@ -31,6 +31,18 @@ Ele só manda comprar quando três coisas acontecem juntas:
 
 Ação ele manda vender com 30% ou menos. FII ele não manda vender: fundo imobiliário paga rendimento todo mês. Em todo o resto, ele espera.
 
+## O diário do robô: ele confere as próprias apostas
+
+- **Todo pregão**, depois do fechamento, o robô anota a chance que deu a cada ativo nos três prazos, e o dia é lacrado.
+- **Quando o prazo vence** (1 semana, 1 mês ou 3 meses depois), ele confere: quantos do Top 10 renderam mais que a média do grupo, e quanto o Top 10 rendeu a mais (ou a menos) que todos. A tela inicial mostra a última aposta que venceu.
+- **Ele aprende com isso.** O modelo já reaprende todo dia com o último ano do mercado. O diário acrescenta outra lição: quanto confiar nas próprias chances. Se ele andou confiante demais (dizia 60% e acertava 52%), a chance mostrada fica mais modesta; se acertou mais do que dizia, fica mais forte. Nunca inverte a opinião: uma sequência de erros costuma ser azar.
+- **Treinado do passado para trás:** o robô viveu todos os pregões de 2019 até hoje, um de cada vez, cada um só com os dados até ele, como se rodasse todo dia desde então. A lição de hoje já vem desses anos.
+- **A correção só entra no app se passar no teste dela**, com regras escritas antes de ver o resultado. **Não passou** (10/11/2026): deixou as chances mais honestas só no prazo de 3 meses, e a regra pedia 2 dos 3. Por isso o app mostra a chance do modelo, e o diário continua anotando as duas para o futuro julgar.
+- O teste mostrou outra coisa importante: as chances do robô ainda quase não dizem nada. Na média dos 1.954 pregões, elas erraram o que aconteceu tanto quanto um cara ou coroa.
+- **Melhorar o modelo (10/11/2026):** três jeitos de ele aprender com mais calma (passos mais curtos, todos os anos com peso, os dois juntos) foram testados com regras escritas antes. Deixaram a chance mais modesta e honesta, mas nenhum ordenou melhor o Top 10: o app continua com o modelo de antes. Para ordenar melhor, o robô precisa de informação nova.
+
+O relatório do diário fica em `D:\Projetos\PraiaVelas\diario` e, com o app aberto no PC, em http://localhost:5190/diario/: o lite numa tela (o que venceu hoje, o que ele diz hoje, o placar e o que aprendeu) e o avançado em abas.
+
 ## O robô está em teste
 
 Cada versão do robô é testada **às cegas**:
@@ -42,7 +54,7 @@ Cada correção vira uma versão nova (0.0.1, 0.0.2, ...), com teste novo. Tamb�
 
 **Até agora, nenhuma versão provou que escolhe melhor que o resto.**
 - Na versão atual (0.0.4), o Top 10 de 1 mês rendeu um pouco mais que a média em 2019–2026, mas pouco demais para separar de sorte.
-- O que melhorou: a chance que ela mostra passou a valer o que diz. Quem teve 60% ou mais rendeu mais que o grupo em 63% das vezes.
+- No teste de uma data por mês, quem teve 60% ou mais rendeu mais que o grupo em 63% das vezes. Vivido todo pregão desde 2019 (o diário), foram 49%: a amostra mensal teve sorte, e a chance ainda não vale o que diz.
 - A 0.0.5 olhava também o preço contra o patrimônio dos FIIs (P/VP), dos relatórios que eles mandam à CVM. Não foi melhor que a 0.0.4.
 - Depois, um pacote com as ideias que faltavam (uma segunda opinião, o modelo da 0.0.3, e o prazo de 3 meses só com a lição dos anos antigos) também não passou nas regras combinadas antes do teste.
 - Por isso o app decide como a 0.0.4 (aparece como 0.0.4+). O que entrou foi o **P/VP na página de cada FII**: quanto a cota custa perto do patrimônio que ela representa, pelo relatório do fundo à CVM. É só informação: o robô não usa.

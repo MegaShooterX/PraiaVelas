@@ -810,3 +810,6 @@ export function writeReports(res, ctx) {
 	if (existsSync(old)) unlinkSync(old);
 	return { lite: join(ctx.folder, 'relatorio-lite.html'), advanced: join(ctx.folder, 'relatorio-avancado.html') };
 }
+
+// Shared with the reports of the robot's journal (diario-relatorio.mjs): the same look everywhere.
+export { bold, card, CSS, esc, markdownSections, mdBody, page, TABS_SCRIPT, TIP_SCRIPT, tile };
