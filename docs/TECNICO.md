@@ -10,7 +10,7 @@ O sistema tem que rodar no celular (APK), no navegador e no PC. JavaScript puro,
 |---|---|
 | `app/` | O aplicativo inteiro: `index.html`, `estilo.css`, `principal.js` (a tela), `grafico.js` (gráfico de candles em canvas, sem biblioteca) |
 | `app/motor/` | O estudo, sem nada de tela: dados, juros (Banco Central), indicadores, candles, estratégias, backtest, mercado, aprendizado (o modelo que ordena o Top 10), projeção, robô, diário (a lição que o robô tira dos próprios acertos e erros) e `analise.js`, que junta tudo |
-| `ferramentas/` | Os programas de terminal:<br>• `bancada.mjs`: o teste rápido de variantes do modelo (uma data a cada 5 pregões, minutos).<br>• `diario.mjs`: o diário do robô (lacra cada pregão, confere o que venceu, aprende); usa `diario-nucleo.mjs`, `diario-trabalho.mjs` (um por núcleo do PC) e `diario-relatorio.mjs`.<br>• `site.mjs`: monta o site do GitHub Pages com os dados do dia.<br>• `servidor.mjs`: serve o app em http://localhost:5190, faz o papel de porta para o Yahoo e o Banco Central, e mostra os testes em `/experimentos/`, com os botões de novo estudo.<br>• `robo.mjs`: o robô no terminal.<br>• `analisar.mjs`: o estudo de um ativo.<br>• `experimento.mjs`: o teste às cegas.<br>• `relatorio.mjs`: os relatórios lite e avançado.<br>• `causalidade.mjs`: a prova de que o motor não olha o futuro, rodada antes de congelar.<br>• `apk.mjs`: o APK. |
+| `ferramentas/` | Os programas de terminal:<br>• `bancada-kronos.mjs`: o teste do Kronos (dados de cada data para o Python, lacre e placar).<br>• `bancada.mjs`: o teste rápido de variantes do modelo (uma data a cada 5 pregões, minutos).<br>• `diario.mjs`: o diário do robô (lacra cada pregão, confere o que venceu, aprende); usa `diario-nucleo.mjs`, `diario-trabalho.mjs` (um por núcleo do PC) e `diario-relatorio.mjs`.<br>• `site.mjs`: monta o site do GitHub Pages com os dados do dia.<br>• `servidor.mjs`: serve o app em http://localhost:5190, faz o papel de porta para o Yahoo e o Banco Central, e mostra os testes em `/experimentos/`, com os botões de novo estudo.<br>• `robo.mjs`: o robô no terminal.<br>• `analisar.mjs`: o estudo de um ativo.<br>• `experimento.mjs`: o teste às cegas.<br>• `relatorio.mjs`: os relatórios lite e avançado.<br>• `causalidade.mjs`: a prova de que o motor não olha o futuro, rodada antes de congelar.<br>• `apk.mjs`: o APK. |
 | `celular/` | A configuração do app Android (`capacitor.config.json`) |
 | `docs/` | Esta parte técnica |
 
@@ -69,7 +69,7 @@ No app, só para **mostrar** o P/VP na página do fundo; o robô não usa. Na 0.
     - **As chances quase não dizem nada:** o log-loss ficou perto do de uma moeda (0,6931) nos três prazos, com ou sem a lição. Não há o que calibrar.
     - **A calibragem de 63% era sorte da amostra:** no teste de uma data por mês, quem teve 60% ou mais em 1 mês bateu o grupo em 63% das vezes (65 casos). Vivido todo pregão, foram 49% (1.318 casos, uns 63 independentes).
     - A lição ajudou em 3 meses e no Top 10 de 1 mês, e atrapalhou em 1 semana. Usar só onde ajudou seria escolher olhando o resultado: fica para o futuro julgar.
-- **Todo dia útil** (`diario.mjs hoje`, pela tarefa "PraiaVelas: robô do dia"):
+- **Quando o Rhuan pede** (`diario.mjs hoje`; desde 12/11/2026 não há tarefa agendada no PC, a pedido dele):
   - vive o dia do fechamento (se o Yahoo ainda não tem o fechamento de mais de 5 ativos, espera 10 minutos, até 2 vezes);
   - corrige com a lição do dia e lacra as duas chances, a do modelo e a corrigida, com o que o robô faria com cada uma e os dois Top 10 (`dias\<data>.json`, SHA-256 em `lacres.jsonl`);
   - confere os dias lacrados cujo prazo venceu (`placar.json`), escreve `licao.json` (o que o app lê) e os dois relatórios.
@@ -121,6 +121,20 @@ O Rhuan: "todas as informações ali são relevantes e precisam ser desse jeito?
 - **Saiu do item:** o "52%" grande com barra (soava preciso, e o diário mostrou que é quase cara ou coroa), o "Esperar" amarelo repetido nos 10 e o motivo técnico ("mais calmo que o normal dele"). O motivo continua na página do ativo.
 - **Entrou:** o preço de hoje e a variação do dia; quanto paga por mês por cota e por ano (FIIs) ou os dividendos do ano (ações); o preço contra o patrimônio, em palavras ("preço 10% abaixo do patrimônio"); a variação do mês; e a opinião do robô em palavras ("igual aos outros", "um pouco melhor que os outros"), com o % pequeno ao lado.
 - O selo colorido só aparece quando o robô age (Comprar, Vender); "esperar" fica discreto.
+
+## O Kronos (13 e 14/11/2026: testado, não entrou)
+
+- **O que é:** um modelo pré-treinado com candles de 45 bolsas (github.com/shiyu-coder/Kronos). Prevê os próximos candles sem treinar com os nossos dados. Testado o Kronos-small (24,7 milhões de parâmetros), em Python, na placa de vídeo, fora do projeto (`D:\tools\deps\PraiaVelas\kronos`).
+- **Sem colar na prova:** os dados de treino dele vão até junho de 2024. Por isso o teste usou só as datas da bancada de 01/07/2024 a 09/10/2026 (115 datas), cada uma com os 90 pregões até ela (`ferramentas/bancada-kronos.mjs`). Plano escrito antes, em `D:\Projetos\PraiaVelas\diario\kronos-2026-11-13`.
+- **Resultado: não passou.** A regra pedia ordenar melhor que o modelo de hoje nos dois prazos e um Top 10 de 1 mês melhor, com t de pelo menos 1,5.
+
+  | Prazo | Ordem (RankIC): Kronos × hoje | Top 10 − todos: Kronos × hoje |
+  |---|---|---|
+  | 1 semana | 0,026 × 0,059 | +0,05% × +0,09% |
+  | 1 mês | 0,032 × 0,058 | +0,42% × −0,24% (diferença com t de 0,41) |
+
+- **O que fica:** nesses anos que o Kronos não viu, o modelo de hoje ordenou melhor que ele, e a ordem do modelo de hoje foi positiva nos dois prazos (RankIC perto de 0,06). Como o Kronos não ajudou, ele não foi convertido para JavaScript.
+- **Na placa:** com um jogo aberto, a memória da placa quase acaba e o Kronos fica umas 80 vezes mais lento (13 minutos por data); sem jogo, 9 segundos por data. O script guarda o progresso a cada 10 datas e retoma de onde parou.
 
 ## O site no GitHub Pages
 
@@ -234,7 +248,7 @@ O app junta a prova do grupo baixando os 20 FIIs (ou as 8 ações) na primeira v
 | `D:\Projetos\PraiaVelas\diario\rascunho-caf39bc4` | rascunho-caf39bc4 | O diário do robô: os 1.954 pregões de 2019 a 2026 vividos um a um, e a lição tirada dos próprios acertos e erros. A lição não passou (chances mais honestas só em 3 meses; a regra pedia 2 dos 3 prazos) e não entra no app. Mostrou que as chances do modelo quase não dizem nada (log-loss de moeda) e que, vivido todo dia, quem teve 60% ou mais em 1 mês bateu o grupo em 49% das vezes, não 63%. Desde 09/11/2026, um dia lacrado por pregão. |
 | `futuro-2026-11-09-v0.0.5`, `-rascunho-8f266276` e `-rascunho-fbd2177e` | 0.0.5, app e pacote | As decisões do fechamento de 09/11/2026: Curto abre por volta de 16/11, Swing por volta de 08/12, Posição em fevereiro de 2027. |
 
-**A prova semanal:** toda sexta-feira, a tarefa "PraiaVelas: robô do dia" lacra as decisões do fechamento da lógica da 0.0.4 (`rascunho-8f266276`) e do pacote (`lacrar-futuro --versao`), abre o que venceu (`atualizar`) e soma tudo (`acumulado`). É a prova limpa, que cresce uma semana por vez. O diário do robô soma a ela um dia lacrado por pregão.
+**A prova do futuro:** até 12/11/2026, a tarefa "PraiaVelas: robô do dia" lacrava toda sexta as decisões da lógica da 0.0.4 (`rascunho-8f266276`) e do pacote. Ela foi removida a pedido do Rhuan ("não tem que rodar nada!"): os lacres agora só saem quando ele pede (`lacrar-futuro --versao ...`, `atualizar`, `acumulado`, ou `diario.mjs hoje`). Um dia lacrado depois do fechamento seguinte não conta como prova.
 
 Novos estudos também saem pela página http://localhost:5190/experimentos/ (com o app aberto no PC):
 - **Lacrar as decisões de hoje:** `lacrar-futuro` com o motor atual congelado.
